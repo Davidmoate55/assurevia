@@ -347,7 +347,7 @@
       $btn
         .addClass('btn-loader')
         .prop('disabled', true)
-        .html('<span class="dot-loader"><span></span><span></span><span></span></span> <span>Chargement…</span>');
+        .html('<span class="dot-loader"><span></span><span></span><span></span></span> <span>Chargement de la simulation</span>');
 
       // envoi AJAX
       const formData = new FormData(this);
@@ -360,15 +360,21 @@
         dataType: 'json',
         success(response){
           if (response.success) {
-            // par exemple, on réutilise createDeclarantCard
-            /*const d = response.data.declarant;
-            const tmiUsed = response.data.tmi;
-            let html = createDeclarantCard('Vous', d, tmiUsed);
+            const d1      = response.data.declarant1;
+            const d2      = response.data.declarant2;
+            const message = response.data.message;
+            const tmi     = response.data.tmi;
+            showPERPopupAfterResult();
+            let html = '';
+            if (d1 && d1.versements_mensuel && d1.prenom) html += createDeclarantCard('Déclarant 1', d1, tmi, message);
+            if (d2 && d2.versements_mensuel && d2.prenom) html += createDeclarantCard('Déclarant 2', d2, tmi, message);
             $('#per-simu-cards').html(html);
-            // scroll vers résultat
-            $('html,body').animate({ scrollTop: $('.container-resultat-simulateur-per').offset().top - 100 }, 400);*/
+            // Scroll automatique sur la div résultat
+            $('html, body').animate({
+              scrollTop: $('.container-resultat-simulateur-per').offset().top - 100
+            }, 400);
           } else {
-            alert(response.data || 'Erreur de simulation');
+            $('#per-simu-cards').html('<div class="alert alert-warning">Erreur : Données non disponibles.</div>');
           }
         },
         error(){
@@ -492,9 +498,9 @@
   function showPERPopupAfterResult() {
     setTimeout(function() {
       $('#popup-simulateur-per').fadeIn();
-    }, 30000); // 8 secondes
+    }, 50000); // 8 secondes
   }
-  function createDeclarantCard(label, d, tmi) {
+  function createDeclarantCard(label, d, tmi, message) {
     return `
       <div class="card">
         <div class="heading">
@@ -533,7 +539,7 @@
           </div>
         </div>
         <div class="footer-line">
-          Résumé basé sur les données extraites de votre avis d’imposition. L’avantage fiscal est calculé en fonction de vos plafonds et de votre TMI.
+          ${message}
         </div>
       </div>
     `;

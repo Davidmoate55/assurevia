@@ -223,13 +223,13 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                               <div class="row">
                                 <div class="col-xl-12 col-lg-12 col-12">
                                   <div class="form-group">
-                                    <label for="salaires">La simulation PER est pour</label>
+                                    <label for="salaires">La simulation PER est</label>
                                     <div class="nb-personne-slider" role="radiogroup" aria-label="Nombre de personnes">
                                       <input type="radio" name="nb_personne" id="nbp-1" value="1" checked>
                                       <label for="nbp-1" class="nb-personne-option">Pour moi <div class="d-none d-md-inline">(simulation individuelle)</div></label>
 
                                       <input type="radio" name="nb_personne" id="nbp-2" value="2">
-                                      <label for="nbp-2" class="nb-personne-option">Nous deux <div class="d-none d-md-inline">(couple marié ou pacsé)</div></label>
+                                      <label for="nbp-2" class="nb-personne-option">Pour nous deux <div class="d-none d-md-inline">(couple marié ou pacsé)</div></label>
 
                                       <div class="nb-personne-track">
                                         <div class="nb-personne-thumb"></div>
@@ -341,7 +341,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                         </div>
                                       </div>
                                     </span>
-                                    <input type="text" id="tmi" name="tmi">
+                                    <input type="text" id="tmi" name="tmi_valeur">
                                   </div>
                                 </div>
                               </div>
@@ -352,7 +352,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                               <div class="row">
                                 <div class="col-xl-6 col-lg-6 col-12">
                                   <div class="form-group">
-                                    <label for="salaires">Salaires nets imposables N-1</label>
+                                    <label for="salaires">Salaires annuels nets imposables N-1</label>
                                     <span class="tooltip-wrapper" tabindex="0" aria-label="Salaires nets imposables N-1">
                                       <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <circle cx="12" cy="12" r="11" fill="#4fa79b" />
@@ -361,7 +361,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                       <div class="tooltip" role="tooltip">
                                         <div class="tooltip-arrow" data-popper-arrow></div>
                                         <div class="tooltip-content">
-                                          <strong>Salaires nets imposables N-1</strong>
+                                          <strong>Salaires annuels nets imposables N-1</strong>
                                         </div>
                                       </div>
                                     </span>
@@ -371,7 +371,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
 
                                 <div class="col-xl-6 col-lg-6 col-12">
                                   <div class="form-group">
-                                    <label for="revenu_activite">Revenu d’activité (Entrepreneur)</label>
+                                    <label for="revenu_activite">Revenu annuel travailleur non salarié</label>
                                     <span class="tooltip-wrapper" tabindex="0" aria-label="Revenu d’activité (Entrepreneur)">
                                       <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <circle cx="12" cy="12" r="11" fill="#4fa79b" />
@@ -380,7 +380,12 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                       <div class="tooltip" role="tooltip">
                                         <div class="tooltip-arrow" data-popper-arrow></div>
                                         <div class="tooltip-content">
-                                          <strong>Revenus d’activité (Entrepreneur)</strong>
+                                          <strong>Revenu travailleur non salarié</strong><br>
+                                          Indiquez votre revenu net imposable.
+                                          <br><br>
+                                          <u>Micro-entrepreneurs</u> : indiquez votre chiffre d’affaires <strong>après abattement forfaitaire</strong> (34 %, 50 % ou 71 % selon votre activité).
+                                          <br>
+                                          <u>Régime réel</u> ou <u>gérant majoritaire</u> : indiquez votre revenu professionnel net imposable (avant impôt sur le revenu).
                                         </div>
                                       </div>
                                     </span>
@@ -423,7 +428,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                               <div class="row">
                                 <div class="col-xl-6 col-lg-6 col-12">
                                   <div class="form-group">
-                                    <label for="salaires2">Salaires nets imposables N-1</label>
+                                    <label for="salaires2">Salaires annuels nets imposables N-1</label>
                                     <span class="tooltip-wrapper" tabindex="0" aria-label="Salaires nets imposables N-1">
                                       <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <circle cx="12" cy="12" r="11" fill="#4fa79b" />
@@ -442,7 +447,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
 
                                 <div class="col-xl-6 col-lg-6 col-12">
                                   <div class="form-group">
-                                    <label for="revenu_activite2">Revenu d’activité (Entrepreneur)</label>
+                                    <label for="revenu_activite2">Revenu annuel travailleur non salarié</label>
                                     <span class="tooltip-wrapper" tabindex="0" aria-label="Revenu d’activité (Entrepreneur)">
                                       <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                         <circle cx="12" cy="12" r="11" fill="#4fa79b" />
@@ -451,7 +456,12 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                       <div class="tooltip" role="tooltip">
                                         <div class="tooltip-arrow" data-popper-arrow></div>
                                         <div class="tooltip-content">
-                                          <strong>Revenus d’activité (Entrepreneur)</strong>
+                                          <strong>Revenu travailleur non salarié</strong><br>
+                                          Indiquez votre revenu net imposable.
+                                          <br><br>
+                                          <u>Micro-entrepreneurs</u> : indiquez votre chiffre d’affaires <strong>après abattement forfaitaire</strong> (34 %, 50 % ou 71 % selon votre activité).
+                                          <br>
+                                          <u>Régime réel</u> ou <u>gérant majoritaire</u> : indiquez votre revenu professionnel net imposable (avant impôt sur le revenu).
                                         </div>
                                       </div>
                                     </span>
@@ -490,7 +500,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                             </div>
                             <!-- /form-input -->
                             <div class="message-rgpd">
-                              <strong>Les résultats fournis par ce simulateur</strong> sont des estimations à titre indicatif. Pour une évaluation précise et complète de vos économies d'impôts, veuillez vous référer à votre avis d'impôt 2025 sur les revenus de 2024. Investir comporte des risques de perte en capital.
+                              <strong>Les résultats fournis par ce simulateur</strong> sont des estimations à titre indicatif. Pour une évaluation précise et complète de vos économies d'impôts, veuillez vous référer à votre dernier avis d'impôt sur les revenus. Investir comporte des risques de perte en capital.
                             </div>
 
                             <div class="form-group bouton-simulateur">

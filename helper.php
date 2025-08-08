@@ -537,11 +537,91 @@ function getPrompt($age1, $age2,  $text, $data, $versementMensuel1, $versementMe
   return $prompt;
 }
 
+function getPromptSansAvis($age1, $age2, $data, $versementMensuel1, $versementMensuel2){
+  $plafond_non_utilise1                     = $data['plafonds']["plafond_non_utilise_declarant1"];
+  $plafond_non_utilise2                     = $data['plafonds']["plafond_non_utilise_declarant2"];
+  $plafond_revenus_declarant1               = $data['plafonds']["plafond_revenus_declarant1"];
+  $plafond_revenus_declarant2               = $data['plafonds']["plafond_revenus_declarant2"];
+  $epargneCumule1                           = $data['declarant1']['versements_cumules'];
+  $capitalFinal1                            = $data['declarant1']['capital_final'];
+  $plusValue1                               = $data['declarant1']['plus_value'];
+  $epargneCumule2                           = $data['declarant1']['versements_cumules'];
+  $capitalFinal2                            = $data['declarant1']['capital_final'];
+  $plusValue2                               = $data['declarant1']['plus_value'];
+  $tmi                                      = $data['tmi'];
+  $declarant1 = "";
+  $declarant2 = "";
+  $declarationRule = "";
+  if (empty($age1) && !empty($age2)) {
+      // seul le déclarant 2 est renseigné
+      $declarationRule = "Seul le déclarant 2 doit être mentionné dans le tableau ; ne remplir aucune variable pour le déclarant 1 les valeur doit rester vide ";
+  } elseif (!empty($age1) && empty($age2)) {
+      // seul le déclarant 1 est renseigné
+      $declarationRule = "Seul le déclarant 1 doit être mentionné dans le tableau ; ne remplir aucune variable pour le déclarant 2 les valeur doit rester vide.";
+  } elseif (!empty($age1) && !empty($age2)) {
+      // les deux sont renseignés
+      $declarationRule = "Les deux déclarants doivent être mentionnés dans le tableau";
+  } else {
+      // aucun des deux n’est renseigné
+      $declarationRule = "Aucun déclarant n'est renseigné ; impossible de remplir le tableau.";
+  }
+  if(!empty($age1) && !empty($versementMensuel1)){
+    $declarant1 = "Le déclarant 1 à $age1 ans et propose d'épargner jusqu'à la retraite {$epargneCumule1}€ avec une mensualité de {$versementMensuel1}€ pour une plus value de {$plusValue1}€ soit un total pour sa sortie de retraite de {$capitalFinal1}€.
+    il a un plafond non utilisé de {$plafond_non_utilise1}€ des 3 dernières années et un plafond pour cette année de {$plafond_revenus_declarant1}€.";
+  }
+  if(!empty($age2) && !empty($versementMensuel2)){
+    $declarant2 = "Le déclarant 2 à $age2 ans et propose d'épargner jusqu'à la retraite {$epargneCumule2}€ avec une mensualité de {$versementMensuel2}€ pour une plus value de {$plusValue2}€ soit un total pour sa sortie de retraite de {$capitalFinal2}€
+    il a un plafond non utilisé de {$plafond_non_utilise2}€ des 3 dernières années et un plafond pour cette année de {$plafond_revenus_declarant2}€.";
+  }
+  $prompt = "Tu es un expert en fiscalité française. Voici des informations essentielles pour me trouver une astucve et un conseil.
+  Je souhaite que tu me retournes uniquement un objet JSON **brut**,
+  sans aucune balise de code (pas de ```json ou ```), et **aucun texte** hors JSON.
+  **Ne te sers que des variables fournies** ci-dessous et du texte brut qui suit.
+  **Tu ne dois inventer aucune information**.
+  **Règle de présence des déclarants** :
+  {$declarationRule}
+  {$declarant1} {$declarant2}
+  Le format de réponse doit être un objet JSON avec les **clés suivantes**,
+  Le format doit rester **strictement identique à chaque appel** pour permettre un traitement automatique.
+  - astuce_declarant1
+  - astuce_declarant2
+  - conseil_personnalise_declarant1
+  - conseil_personnalise_declarant2
+  Consignes pour chaque champ :
+  **Très important l'astuce et le conseil personnalisé par déclarant doivent etre strictement différents.**
+  Pour info le TMI du foyer fiscal est de {$tmi}%.
+  Pour astuce_declarantX :
+  Une phrase, 250 caractères max, personnalisée, qui propose une action concrète pour optimiser le PER : ajuster les versements (pour annuler l’impôt), prioriser les plafonds non utilisés, ajuster le rythme, etc.
+  L’astuce doit être différente du conseil et différente entre les deux déclarants.
+  Pour conseil_personnalise_declarantX :
+  Une phrase, 250 caractères max, personnalisée, qui donne un conseil concret (priorisation, rythme, plafond, etc.), ton simple, confiant et rassurant.
+  Différent de l’astuce et personnalisé pour chaque déclarant. Si TMI ≤ 0.11 et impôt quasi nul, propose une alternative (ex : assurance-vie), sinon focus PER.
+  - exemple_astuce :  Mettez en place un versement automatique de XXX € par mois, vous lisserez le risque de marché tout en utilisant progressivement votre plafond courant.
+                      Programmez vos virements juste après la paie : vous épargnez avant de dépenser et sécurisez votre rythme.
+                      Augmentez automatiquement l'épargne mensuelle de 3 % chaque année pour suivre l’inflation sans y penser.
+                      Scindez vos virements en deux dates (début et milieu de mois) pour lisser encore mieux l’effet de marché.
+                      Versez votre prime annuelle en janvier : vous profitez toute l’année des intérêts composés.
+                      Coupez le versement unique : 60 % maintenant, 40 % en fin d’année pour garder de la trésorerie et lisser le timing.
+  - exemple_conseil : Utilisez XX € de prime unique cette année pour absorber d’un coup votre plafond non utilisé et annuler la quasi-totalité de votre impôt.
+                      Priorisez d’abord les 17 000 € de plafond non utilisé : c’est la déduction la plus rentable.
+                      Répartissez le plafond non utilisé entre les deux déclarants pour maximiser la déduction et garder une imposition équilibrée dans le foyer.
+                      Calibrez vos versements pour annuler l’impôt ; au-delà, placez le surplus sur une assurance-vie plus souple.
+                      Si votre TMI chute sous 11 % après usage du plafond, basculez le surplus d’épargne vers une assurance-vie pour conserver un cadre fiscal avantageux.
+                      Impôt déjà à zéro ? Orientez les nouveaux versements vers un support libre pour rester liquide et diversifié.
+      {
+        \"astuce_declarant1\": \"string\",
+        \"astuce_declarant2\": \"string\",
+        \"conseil_personnalise_declarant1\": \"string\",
+        \"conseil_personnalise_declarant2\": \"string\",
+      }";
+
+  return $prompt;
+}
+
 function plafond_per_annee($anneeCotisation, $salaireNMoins1, $revActNMoins1, $PASS){
     // PASS de l’année de base (N-1), fallback = dernier PASS connu
     $lastYear  = array_key_last($PASS);
     $pass = $PASS[$anneeCotisation] ?? $PASS[$lastYear];
-
     // Salarié : 10% du salaire (limité à 8 PASS), plancher 10% PASS
     $plafond_salarie = max(0.10 * min($salaireNMoins1, 8 * $pass), 0.10 * $pass);
 
@@ -554,7 +634,6 @@ function plafond_per_annee($anneeCotisation, $salaireNMoins1, $revActNMoins1, $P
         $plafond_indep = max($plafond_indep, 0.10 * $pass);
         $plafond_indep = min($plafond_indep, 1.85 * $pass);
     }
-
     return round(max($plafond_salarie, $plafond_indep), 2); // pas de cumul
 }
 
@@ -573,7 +652,53 @@ function calcul_plafonds_structures($anneeCotisation, $PASS, $salaireDefault, $r
     $plafond_revenus = end($plafonds);
 
     return [
-        "plafond_non_utilise_{$declarant}" => round($plafond_non_utilise, 2),
-        "plafond_revenus_{$declarant}"     => $plafond_revenus,
+        "plafond_non_utilise_{$declarant}" => round($plafond_non_utilise, 0),
+        "plafond_revenus_{$declarant}"     => round($plafond_revenus,0),
     ];
+}
+
+function calculer_tmi(array $contexte, array $tranches): float{
+    // 1) TMI connu
+    if (!empty($contexte['connait_tmi']) && $contexte['connait_tmi'] === true) {
+        $tmi_valeur = isset($contexte['tmi_valeur']) ? (float)$contexte['tmi_valeur'] : null;
+        return ($tmi_valeur !== null && $tmi_valeur >= 0) ? $tmi_valeur : 0.0;
+    }
+
+    // 2) Calcul via quotient familial
+    $nb_personne = isset($contexte['nb_personne']) ? (int)$contexte['nb_personne'] : 1;
+
+    $salaires_1   = isset($contexte['salaires_1'])   ? (float)$contexte['salaires_1']   : 0.0;
+    $revenu_act_1 = isset($contexte['revenu_act_1']) ? (float)$contexte['revenu_act_1'] : 0.0;
+    $salaires_2   = ($nb_personne === 2) ? (float)($contexte['salaires_2'] ?? 0.0) : 0.0;
+    $revenu_act_2 = ($nb_personne === 2) ? (float)($contexte['revenu_act_2'] ?? 0.0) : 0.0;
+
+    $parts = (isset($contexte['parts']) && (int)$contexte['parts'] > 0) ? (int)$contexte['parts'] : 1;
+
+    $revenu_imposable_total = max(0.0, $salaires_1 + $revenu_act_1 + $salaires_2 + $revenu_act_2);
+    $quotient_familial = $revenu_imposable_total / max(1, $parts);
+
+    // Application du barème
+    $tmi = 0.0;
+    foreach ($tranches as $tranche) {
+        if ($quotient_familial <= $tranche['max']) {
+            $tmi = $tranche['taux'];
+            break;
+        }
+    }
+    return $tmi;
+}
+
+function charger_tranches_tmi(array $section): array {
+    $tranches = [];
+    for ($i = 1; $i <= 10; $i++) { // marge si tu ajoutes un jour d'autres tranches
+        $maxKey = "max{$i}";
+        $tauxKey = "taux{$i}";
+        if (!isset($section[$maxKey], $section[$tauxKey])) break;
+
+        $max  = ($section[$maxKey] === 'INF') ? INF : (float)$section[$maxKey];
+        $taux = (float)$section[$tauxKey];
+
+        $tranches[] = ['max' => $max, 'taux' => $taux];
+    }
+    return $tranches;
 }
