@@ -1,0 +1,10 @@
+{
+    "require": {
+        "giggsey/libphonenumber-for-php": "^9.0",
+        "sendinblue/api-v3-sdk": "^8.4",
+        "getbrevo/brevo-php": "^2.0",
+        "smalot/pdfparser": "^2.12",
+        "thiagoalessio/tesseract_ocr": "^2.13",
+        "google/cloud-vision": "^2.0"
+    }
+}
