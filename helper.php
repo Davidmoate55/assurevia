@@ -5,6 +5,28 @@ use Google\Cloud\Vision\V1\Image;
 use Google\Cloud\Vision\V1\AnnotateImageRequest;
 use Google\Cloud\Vision\V1\BatchAnnotateImagesRequest;
 
+
+function load_config(string $path, ?string $section = null, bool $processSections = true): array{
+    if (!file_exists($path)) {
+        throw new Exception("Fichier de configuration introuvable : $path");
+    }
+
+    $config = parse_ini_file($path, $processSections);
+
+    if ($config === false) {
+        throw new Exception("Erreur lors du chargement de la configuration : $path");
+    }
+
+    if ($section !== null) {
+        if (!isset($config[$section])) {
+            throw new Exception("Section '$section' introuvable dans le fichier : $path");
+        }
+        return $config[$section];
+    }
+
+    return $config;
+}
+
 function extraireInfosFiscalesImages(string $text): array {
     $tmi = null;
     $plafond_non_utilise_declarant1 = 0;
@@ -513,4 +535,45 @@ function getPrompt($age1, $age2,  $text, $data, $versementMensuel1, $versementMe
 
   $prompt .= "\n\nVoici le texte extrait de l’avis d’imposition :\n{$text}";
   return $prompt;
+}
+
+function plafond_per_annee($anneeCotisation, $salaireNMoins1, $revActNMoins1, $PASS){
+    // PASS de l’année de base (N-1), fallback = dernier PASS connu
+    $lastYear  = array_key_last($PASS);
+    $pass = $PASS[$anneeCotisation] ?? $PASS[$lastYear];
+
+    // Salarié : 10% du salaire (limité à 8 PASS), plancher 10% PASS
+    $plafond_salarie = max(0.10 * min($salaireNMoins1, 8 * $pass), 0.10 * $pass);
+
+    // Indépendant : 10% [0..1 PASS] + 15% [1..8 PASS], plancher 10% PASS, plafond 1.85 PASS
+    $plafond_indep = 0.0;
+    if ($revActNMoins1 > 0) {
+        $part_0a1 = max(min($revActNMoins1, $pass), 0);
+        $part_1a8 = max(min($revActNMoins1, 8 * $pass) - $pass, 0);
+        $plafond_indep = 0.10 * $part_0a1 + 0.15 * $part_1a8;
+        $plafond_indep = max($plafond_indep, 0.10 * $pass);
+        $plafond_indep = min($plafond_indep, 1.85 * $pass);
+    }
+
+    return round(max($plafond_salarie, $plafond_indep), 2); // pas de cumul
+}
+
+function calcul_plafonds_structures($anneeCotisation, $PASS, $salaireDefault, $revActDefault, $declarant = 'declarant1'){
+    $plafonds = [];
+    for ($an = $anneeCotisation - 3; $an <= $anneeCotisation; $an++) {
+        $plafonds[$an] = plafond_per_annee($an, $salaireDefault, $revActDefault, $PASS);
+    }
+
+    ksort($plafonds);
+
+    // Les 3 premières années = plafonds non utilisés → somme
+    $plafond_non_utilise = array_sum(array_slice($plafonds, 0, 3, true));
+
+    // Le dernier = plafond revenus (année N)
+    $plafond_revenus = end($plafonds);
+
+    return [
+        "plafond_non_utilise_{$declarant}" => round($plafond_non_utilise, 2),
+        "plafond_revenus_{$declarant}"     => $plafond_revenus,
+    ];
 }

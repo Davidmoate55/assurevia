@@ -132,104 +132,19 @@ function handle_simulation_perin_avec_avis() {
 }
 
 function handle_simulation_perin_sans_avis() {
-      // 1) Lecture des champs POST
-      $salaire       = isset($_POST['salaires'])          ? floatval($_POST['salaires'])          : 0;
-      $revAct        = isset($_POST['revenu_activite'])   ? floatval($_POST['revenu_activite'])   : 0;
-      $revMob        = isset($_POST['revenu_mobilier'])   ? floatval($_POST['revenu_mobilier'])   : 0;
-      $knowsTmi      = (isset($_POST['tmi']) && $_POST['tmi']==='oui');
-      $age           = isset($_POST['age'])               ? intval($_POST['age'])                 : null;
-      $versement     = isset($_POST['versement'])         ? floatval($_POST['versement'])         : null;
-      // Selon votre HTML, renommez l'input numérique de TMI en name="tmi_valeur"
-      $tmi_valeur    = $knowsTmi && isset($_POST['tmi_valeur'])
-                       ? floatval($_POST['tmi_valeur']) / 100
-                       : null;
-      $parts         = !$knowsTmi && isset($_POST['part'])
-                       ? intval($_POST['part'])
-                       : 1;
+    // 1) Lecture des champs POST
+    $resultat         = [];
+    $salaire          = isset($_POST['salaires'])          ? floatval($_POST['salaires'])          : 0;
+    $revAct           = isset($_POST['revenu_activite'])   ? floatval($_POST['revenu_activite'])   : 0;
+    $knowsTmi         = (isset($_POST['tmi']) && $_POST['tmi']==='oui');
+    $age              = isset($_POST['age'])               ? intval($_POST['age'])                 : null;
+    $versement        = isset($_POST['versement'])         ? floatval($_POST['versement'])         : null;
+    $tmi_valeur       = $knowsTmi && isset($_POST['tmi_valeur'])? floatval($_POST['tmi_valeur']) / 100: null;
+    $parts            = !$knowsTmi && isset($_POST['part'])? intval($_POST['part']): 1;
+    $PASS             = array_map('floatval', load_config(__DIR__ . '/../config.ini', 'PASS'));
+    $anneeCotisation  = (int)date('Y');
 
-      // 2) Définitions statiques
-      // Barème 2023 (impôt dû en 2024 sur revenus 2023)
-      $bareme = [
-          [10777, 0.00],
-          [27478, 0.11],
-          [78570, 0.30],
-          [168994, 0.41],
-          [PHP_INT_MAX, 0.45],
-      ];
-      // PASS historique (valeur annuelle)
-      $pass_values = [
-          2021 => 41136,
-          2022 => 43992,
-          2023 => 44960,
-          2024 => 45600,
-          2025 => 46700,
-      ];
-
-
-      function getPASS(int $annee): ?float {
-          $url = "https://www.urssaf.fr/portail/home/taux-et-baremes/particuliers/le-plafond-de-la-securite-social.html";
-          $html = @file_get_contents($url);
-          if (!$html) return null;
-
-          // Cherche le montant correspondant à l'année
-          if (preg_match('/' . $annee . '.*?([\d\s]+) €/u', $html, $matches)) {
-              $montant = (float) str_replace(' ', '', $matches[1]);
-              return $montant;
-          }
-          return null;
-      }
-
-      function calculPlafondPER(float $salaire, float $revenus_autres, int $annee, array $pass_values): array {
-          if (!isset($pass_values[$annee])) {
-              throw new Exception("PASS non défini pour l'année $annee.");
-          }
-          $pass = $pass_values[$annee];
-
-          // ---- Plafond salarié ----
-          $plafond_salarie = 0;
-          if ($salaire > 0) {
-              $plafond_salarie = 0.10 * $salaire;
-              $plafond_salarie = min($plafond_salarie, 0.08 * $pass);
-          }
-
-          // ---- Plafond indépendant / autres revenus ----
-          $plafond_autres = 0;
-          if ($revenus_autres > 0) {
-              // 10% du revenu limité au PASS + 15% de la tranche entre PASS et 8*PASS
-              $plafond_autres = (0.10 * min($revenus_autres, $pass))
-                              + (0.15 * max(0, min($revenus_autres, 8 * $pass) - $pass));
-              // Plafonné à 10% du PASS
-              $plafond_autres = min($plafond_autres, 0.10 * $pass);
-          }
-
-          return [
-              'annee' => $annee,
-              'PASS' => $pass,
-              'plafond_salarie' => round($plafond_salarie, 2),
-              'plafond_autres' => round($plafond_autres, 2),
-              'plafond_total' => round($plafond_salarie + $plafond_autres, 2),
-          ];
-      }
-
-      // 4) Préparation des revenus pour N-1, N-2, N-3 (ici, on réutilise N-1 pour N-2 et N-3)
-      $annee_courante = intval(date('Y')) - 1;
-      $resultats = [];
-      $total = 0;
-      $revenus_autres = $revAct + $revMob;
-
-      for ($y = $annee_courante - 3; $y <= $annee_courante; $y++) {
-          $plafond = calculPlafondPER($salaire, $revenus_autres, $y, $pass_values);
-          $resultats[$y] = $plafond;
-          $total += $plafond['plafond_total'];
-      }
-
-      $resultats['total_disponible'] = round($total, 2);
-
-      // Affichage
-      echo "<pre>";
-      print_r($resultats);
-      echo "</pre>";
-
-      // 6) Réponse JSON
-      wp_send_json_success($resultats);
-  }
+    $plafonds = calcul_plafonds_structures($anneeCotisation, $PASS, $salaire, $revAct, 'declarant1');
+    var_dump($plafonds);
+    wp_send_json_success($resultat);
+}

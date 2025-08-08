@@ -218,70 +218,30 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                         <div class="col-xl-8 col-12">
                           <form id="form-sans-avis" enctype="multipart/form-data">
                             <input type="hidden" name="action" value="simulateur_perin_sans_avis">
-
                             <div class="form-input">
-                              <!-- Ligne 1 -->
+                              <!-- Ligne 0 -->
                               <div class="row">
-                                <div class="col-xl-6 col-lg-6 col-12">
+                                <div class="col-xl-12 col-lg-12 col-12">
                                   <div class="form-group">
-                                    <label for="salaires">Salaires nets imposables N-1</label>
-                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Salaires nets imposables N-1">
-                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
-                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
-                                      </svg>
-                                      <div class="tooltip" role="tooltip">
-                                        <div class="tooltip-arrow" data-popper-arrow></div>
-                                        <div class="tooltip-content">
-                                          <strong>Salaires nets imposables N-1</strong>
-                                        </div>
-                                      </div>
-                                    </span>
-                                    <input type="number" id="salaires" name="salaires">
-                                  </div>
-                                </div>
+                                    <label for="salaires">La simulation PER est pour</label>
+                                    <div class="nb-personne-slider" role="radiogroup" aria-label="Nombre de personnes">
+                                      <input type="radio" name="nb_personne" id="nbp-1" value="1" checked>
+                                      <label for="nbp-1" class="nb-personne-option">Pour moi <div class="d-none d-md-inline">(simulation individuelle)</div></label>
 
-                                <div class="col-xl-6 col-lg-6 col-12">
-                                  <div class="form-group">
-                                    <label for="revenu_activite">Revenu d’activité (Entrepreneur)</label>
-                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Revenu d’activité (Entrepreneur)">
-                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
-                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
-                                      </svg>
-                                      <div class="tooltip" role="tooltip">
-                                        <div class="tooltip-arrow" data-popper-arrow></div>
-                                        <div class="tooltip-content">
-                                          <strong>Revenus d’activité (Entrepreneur)</strong>
-                                        </div>
+                                      <input type="radio" name="nb_personne" id="nbp-2" value="2">
+                                      <label for="nbp-2" class="nb-personne-option">Nous deux <div class="d-none d-md-inline">(couple marié ou pacsé)</div></label>
+
+                                      <div class="nb-personne-track">
+                                        <div class="nb-personne-thumb"></div>
                                       </div>
-                                    </span>
-                                    <input type="number" id="revenu_activite" name="revenu_activite">
+                                    </div>
+
                                   </div>
                                 </div>
                               </div>
-                              <!-- Ligne 2 -->
+                              <!-- Ligne 1 -->
                               <div class="row">
-                                <div class="col-xl-6 col-lg-6 col-12">
-                                  <div class="form-group">
-                                    <label for="revenu_mobilier">Revenus mobiliers</label>
-                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Revenus mobiliers">
-                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
-                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
-                                      </svg>
-                                      <div class="tooltip" role="tooltip">
-                                        <div class="tooltip-arrow" data-popper-arrow></div>
-                                        <div class="tooltip-content">
-                                          <strong>Revenus mobiliers et plus-values N-1</strong>
-                                        </div>
-                                      </div>
-                                    </span>
-                                    <input type="number" id="revenu_mobilier" name="revenu_mobilier">
-                                  </div>
-                                </div>
-
-                                <div class="col-xl-6 col-lg-6 col-12">
+                                <div class="col-xl-12 col-lg-12 col-12">
                                   <div class="form-group">
                                     <label for="profil" class="label-with-tooltip">
                                       Votre profil d'épargne
@@ -316,35 +276,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                   </div>
                                 </div>
                               </div>
-                              <!-- Ligne 3 -->
-                              <div class="row">
-                                <div class="col-xl-6 col-lg-6 col-12">
-                                  <div class="form-group">
-                                    <label for="age">Votre âge</label>
-                                    <input type="number" id="age" name="age">
-                                  </div>
-                                </div>
-
-                                <div class="col-xl-6 col-lg-6 col-12">
-                                  <div class="form-group">
-                                    <label for="versement">Votre épargne mensuelle pour le PER</label>
-                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Épargne mensuelle PER">
-                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
-                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
-                                      </svg>
-                                      <div class="tooltip" role="tooltip">
-                                        <div class="tooltip-arrow" data-popper-arrow></div>
-                                        <div class="tooltip-content">
-                                          <strong>Épargne mensuelle:</strong> Saisissez le montant que vous souhaitez investir chaque mois dans votre PER.
-                                        </div>
-                                      </div>
-                                    </span>
-                                    <input type="number" id="versement" name="versement">
-                                  </div>
-                                </div>
-                              </div>
-                              <!-- Ligne 4 -->
+                              <!-- Ligne 2 -->
                               <div class="row">
                                 <div class="col-xl-6 col-lg-6 col-12">
                                   <div class="form-group">
@@ -414,9 +346,151 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                 </div>
                               </div>
                             </div>
+                            <div class="form-input mt-4">
+                              <label id="label-pour-moi" style="display:none;"><strong>Pour moi</strong></label>
+                              <!-- Ligne 3 -->
+                              <div class="row">
+                                <div class="col-xl-6 col-lg-6 col-12">
+                                  <div class="form-group">
+                                    <label for="salaires">Salaires nets imposables N-1</label>
+                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Salaires nets imposables N-1">
+                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
+                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
+                                      </svg>
+                                      <div class="tooltip" role="tooltip">
+                                        <div class="tooltip-arrow" data-popper-arrow></div>
+                                        <div class="tooltip-content">
+                                          <strong>Salaires nets imposables N-1</strong>
+                                        </div>
+                                      </div>
+                                    </span>
+                                    <input type="number" id="salaires" name="salaires">
+                                  </div>
+                                </div>
+
+                                <div class="col-xl-6 col-lg-6 col-12">
+                                  <div class="form-group">
+                                    <label for="revenu_activite">Revenu d’activité (Entrepreneur)</label>
+                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Revenu d’activité (Entrepreneur)">
+                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
+                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
+                                      </svg>
+                                      <div class="tooltip" role="tooltip">
+                                        <div class="tooltip-arrow" data-popper-arrow></div>
+                                        <div class="tooltip-content">
+                                          <strong>Revenus d’activité (Entrepreneur)</strong>
+                                        </div>
+                                      </div>
+                                    </span>
+                                    <input type="number" id="revenu_activite" name="revenu_activite">
+                                  </div>
+                                </div>
+                              </div>
+                              <!-- Ligne 4 -->
+                              <div class="row">
+                                <div class="col-xl-6 col-lg-6 col-12">
+                                  <div class="form-group">
+                                    <label for="age">Votre âge</label>
+                                    <input type="number" id="age" name="age">
+                                  </div>
+                                </div>
+
+                                <div class="col-xl-6 col-lg-6 col-12">
+                                  <div class="form-group">
+                                    <label for="versement">Votre épargne mensuelle pour le PER</label>
+                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Épargne mensuelle PER">
+                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
+                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
+                                      </svg>
+                                      <div class="tooltip" role="tooltip">
+                                        <div class="tooltip-arrow" data-popper-arrow></div>
+                                        <div class="tooltip-content">
+                                          <strong>Épargne mensuelle:</strong> Saisissez le montant que vous souhaitez investir chaque mois dans votre PER.
+                                        </div>
+                                      </div>
+                                    </span>
+                                    <input type="number" id="versement" name="versement">
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="form-input mt-4" id="bloc-declarant-2" style="display:none;">
+                              <label><strong>Deuxième déclarant</strong></label>
+                              <!-- Ligne 5 -->
+                              <div class="row">
+                                <div class="col-xl-6 col-lg-6 col-12">
+                                  <div class="form-group">
+                                    <label for="salaires2">Salaires nets imposables N-1</label>
+                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Salaires nets imposables N-1">
+                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
+                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
+                                      </svg>
+                                      <div class="tooltip" role="tooltip">
+                                        <div class="tooltip-arrow" data-popper-arrow></div>
+                                        <div class="tooltip-content">
+                                          <strong>Salaires nets imposables N-1</strong>
+                                        </div>
+                                      </div>
+                                    </span>
+                                    <input type="number" id="salaires2" name="salaires2">
+                                  </div>
+                                </div>
+
+                                <div class="col-xl-6 col-lg-6 col-12">
+                                  <div class="form-group">
+                                    <label for="revenu_activite2">Revenu d’activité (Entrepreneur)</label>
+                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Revenu d’activité (Entrepreneur)">
+                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
+                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
+                                      </svg>
+                                      <div class="tooltip" role="tooltip">
+                                        <div class="tooltip-arrow" data-popper-arrow></div>
+                                        <div class="tooltip-content">
+                                          <strong>Revenus d’activité (Entrepreneur)</strong>
+                                        </div>
+                                      </div>
+                                    </span>
+                                    <input type="number" id="revenu_activite2" name="revenu_activite2">
+                                  </div>
+                                </div>
+                              </div>
+                              <!-- Ligne 6 -->
+                              <div class="row">
+                                <div class="col-xl-6 col-lg-6 col-12">
+                                  <div class="form-group">
+                                    <label for="age_2">Votre âge</label>
+                                    <input type="number" id="age_2" name="age_2">
+                                  </div>
+                                </div>
+
+                                <div class="col-xl-6 col-lg-6 col-12">
+                                  <div class="form-group">
+                                    <label for="versement_2">Votre épargne mensuelle pour le PER</label>
+                                    <span class="tooltip-wrapper" tabindex="0" aria-label="Épargne mensuelle PER">
+                                      <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <circle cx="12" cy="12" r="11" fill="#4fa79b" />
+                                        <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
+                                      </svg>
+                                      <div class="tooltip" role="tooltip">
+                                        <div class="tooltip-arrow" data-popper-arrow></div>
+                                        <div class="tooltip-content">
+                                          <strong>Épargne mensuelle:</strong> Saisissez le montant que vous souhaitez investir chaque mois dans votre PER.
+                                        </div>
+                                      </div>
+                                    </span>
+                                    <input type="number" id="versement_2" name="versement_2">
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                             <!-- /form-input -->
                             <div class="message-rgpd">
-                              <strong>* Conformité RGPD: </strong>Votre avis d’imposition sert uniquement à la simulation, n’est jamais stocké, et reste totalement confidentiel.
+                              <strong>Les résultats fournis par ce simulateur</strong> sont des estimations à titre indicatif. Pour une évaluation précise et complète de vos économies d'impôts, veuillez vous référer à votre avis d'impôt 2025 sur les revenus de 2024. Investir comporte des risques de perte en capital.
                             </div>
 
                             <div class="form-group bouton-simulateur">

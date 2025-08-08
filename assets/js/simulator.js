@@ -23,13 +23,26 @@
       $rowTmi.hide();
     }
   }
+  function toggleDeclarantUI() {
+    const val = $('input[name="nb_personne"]:checked').val();
+    if (val === '2') {
+      $('#bloc-declarant-2, #label-pour-moi').stop(true, true).fadeIn(200);
+    } else {
+      $('#bloc-declarant-2, #label-pour-moi').stop(true, true).fadeOut(200);
+    }
+  }
 
-// Au chargement initial
-majAffichagePart();
+  // Au chargement (pour l'état initial) :
+  toggleDeclarantUI();
 
-// Au clic / changement sur chacune des radios
-$tmiOui.on('change', majAffichagePart);
-$tmiNon.on('change', majAffichagePart);
+  // À chaque changement de radio :
+  $(document).on('change', 'input[name="nb_personne"]', toggleDeclarantUI);
+  // Au chargement initial
+  majAffichagePart();
+
+  // Au clic / changement sur chacune des radios
+  $tmiOui.on('change', majAffichagePart);
+  $tmiNon.on('change', majAffichagePart);
 
   const initInternationalPhone = () => {
     const input = document.querySelector("#telephone");
@@ -215,31 +228,54 @@ $tmiNon.on('change', majAffichagePart);
       $('.error-message').remove();
 
       let valid = true;
-      const $form        = $(this);
-      const $salaires    = $('#salaires');
-      const $revAct      = $('#revenu_activite');
-      const $revMob      = $('#revenu_mobilier');
-      const $age         = $('#age');
-      const $versement   = $('#versement');
-      const $tmiOui      = $('#tmi-oui');
-      const $tmiField    = $('#tmi');
-      const $partField   = $('#part');
-      // valeurs
-      const salaires    = parseFloat($salaires.val())    || 0;
-      const revAct      = parseFloat($revAct.val())      || 0;
-      const revMob      = parseFloat($revMob.val())      || 0;
-      const age         = parseInt($age.val(), 10)       || null;
-      const versement   = parseFloat($versement.val())   || null;
-      const knowsTMI    = $tmiOui.is(':checked');
-      const tmi         = parseFloat($tmiField.val())    || null;
-      const parts       = $partField.val().trim();
+      const $form        = jQuery(this);
 
-      // 1) au moins un revenu
-      if (salaires <= 0 && revAct <= 0 && revMob <= 0) {
-        showError($revMob, "Au moins un des 3 revenus est obligatoire.");
+
+      // D1
+      const $salaires    = jQuery('#salaires');
+      const $revAct      = jQuery('#revenu_activite');
+      const $age         = jQuery('#age');
+      const $versement   = jQuery('#versement');
+
+      // TMI/parts
+      const $tmiOui      = jQuery('#tmi-oui');
+      const $tmiField    = jQuery('#tmi');
+      const $partField   = jQuery('#part');
+
+      // D2
+      const $salaires2   = jQuery('#salaires2');
+      const $revAct2     = jQuery('#revenu_activite2');
+      const $age2        = jQuery('#age_2');
+      const $versement2  = jQuery('#versement_2');
+
+      // valeurs
+      const salaires   = parseFloat($salaires.val()) || 0;
+      const revAct     = parseFloat($revAct.val())   || 0;
+
+      const age        = $age.val()       ? parseInt($age.val(), 10)        : null;
+      const versement  = $versement.val() ? parseFloat($versement.val())    : null;
+
+      const knowsTMI   = $tmiOui.is(':checked');
+      const tmi        = $tmiField.val()  ? parseFloat($tmiField.val())     : null;
+      const parts      = ($partField.val() || '').trim();
+
+      // D2 values
+      const isCouple   = jQuery('input[name="nb_personne"]:checked').val() === '2';
+      const salaires2  = parseFloat($salaires2.val()) || 0;
+      const revAct2Val = parseFloat($revAct2.val())   || 0;
+      const age2Val    = $age2.val()       ? parseInt($age2.val(), 10)     : null;
+      const vers2Val   = $versement2.val() ? parseFloat($versement2.val()) : null;
+
+      // ---------------- RÈGLES "POUR MOI" (toujours appliquées à D1) ----------------
+
+      // 1) Au moins un revenu (salaires OU revAct)
+      if (salaires <= 0 && revAct <= 0) {
+        showError($salaires, "Renseignez au moins un des deux : salaires ou revenu d’activité.");
+        showError($revAct,  "Renseignez au moins un des deux : salaires ou revenu d’activité.");
         valid = false;
       }
-      // 2) âge
+
+      // 2) Âge D1 obligatoire + bornes
       if (!$age.val()) {
         showError($age, "Votre âge est obligatoire.");
         valid = false;
@@ -250,7 +286,8 @@ $tmiNon.on('change', majAffichagePart);
         showError($age, "Âge maximal pour la retraite : 64 ans.");
         valid = false;
       }
-      // 3) versement
+
+      // 3) Versement D1 obligatoire + seuil
       if (!$versement.val()) {
         showError($versement, "Votre versement mensuel est obligatoire.");
         valid = false;
@@ -258,6 +295,7 @@ $tmiNon.on('change', majAffichagePart);
         showError($versement, "Le versement doit être ≥ 50 €.");
         valid = false;
       }
+
       // 4) TMI vs parts
       if (knowsTMI) {
         if (!$tmiField.val()) {
@@ -270,8 +308,39 @@ $tmiNon.on('change', majAffichagePart);
           valid = false;
         }
       }
-      if (!valid) return;
 
+      // ---------------- RÈGLES "NOUS DEUX" (appliquées en plus à D2) ----------------
+      if (isCouple) {
+        // Âge D2 obligatoire + bornes
+        if (!$age2.val()) {
+          showError($age2, "L’âge du deuxième déclarant est obligatoire.");
+          valid = false;
+        } else if (age2Val < 18) {
+          showError($age2, "Le deuxième déclarant doit être majeur (≥ 18 ans).");
+          valid = false;
+        } else if (age2Val > 64) {
+          showError($age2, "Âge maximal : 64 ans pour le deuxième déclarant.");
+          valid = false;
+        }
+
+        // Versement D2 obligatoire + seuil
+        if (!$versement2.val()) {
+          showError($versement2, "Le versement mensuel du deuxième déclarant est obligatoire.");
+          valid = false;
+        } else if (vers2Val < 50) {
+          showError($versement2, "Le versement du deuxième déclarant doit être ≥ 50 €.");
+          valid = false;
+        }
+
+        // D2 : au moins un des deux salaires2/revAct2 (> 0)
+        if (salaires2 <= 0 && revAct2Val <= 0) {
+          showError($salaires2, "Renseignez au moins un des deux : salaires ou revenu d’activité (2).");
+          showError($revAct2,   "Renseignez au moins un des deux : salaires ou revenu d’activité (2).");
+          valid = false;
+        }
+      }
+
+      if (!valid) return;
       // loader bouton (idem handlePERForm)
       const $btn = $form.find('button[type=submit]');
       const origText = $btn.text();
@@ -303,7 +372,7 @@ $tmiNon.on('change', majAffichagePart);
           }
         },
         error(){
-          alert('Erreur réseau, réessayez.');
+          //alert('Erreur réseau, réessayez.');
         },
         complete(){
           $btn
