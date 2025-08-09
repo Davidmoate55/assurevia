@@ -323,7 +323,13 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                         </div>
                                       </div>
                                     </span>
-                                    <input type="text" id="part" name="part">
+                                    <div class="parts-slider-wrap">
+                                      <div class="parts-range-row">
+                                        <div id="parts-output">1</div>
+                                        <input type="range" id="parts-range" min="1" max="10" step="1" value="1">
+                                        <input type="hidden" id="part" name="part" value="1">
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                                 <div class="col-xl-6 col-lg-6 col-12" id="row-tmi" style="display: none;">
@@ -341,7 +347,14 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                         </div>
                                       </div>
                                     </span>
-                                    <input type="text" id="tmi" name="tmi_valeur">
+                                    <!--input type="text" id="tmi" name="tmi_valeur" -->
+                                    <div class="tmi-slider-wrap">
+                                      <div class="tmi-range-row">
+                                        <input id="tmi-range" type="range" min="0" max="45" step="any" value="0" />
+                                        <output id="tmi-output">0%</output>
+                                        <input type="hidden" id="tmi_valeur" name="tmi_valeur" value="1">
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>

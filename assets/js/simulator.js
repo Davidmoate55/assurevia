@@ -5,6 +5,100 @@
   var $tmiOui   = $('#tmi-oui');
   var $tmiNon   = $('#tmi-non');
 
+  const partsRange = document.getElementById('parts-range');
+  const partsOutput = document.getElementById('parts-output');
+  const partsInput  = document.getElementById('part');
+
+  function updatePartsFill(el){
+    const min = +el.min || 1, max = +el.max || 10, val = +el.value || 1;
+    el.style.setProperty('--fill', ((val - min) / (max - min) * 100) + '%');
+  }
+
+  if (partsRange) {
+    // Init : si pas de value sur le range, force sur 1
+    if (!partsRange.value) partsRange.value = partsRange.min || 1;
+    updatePartsFill(partsRange);
+    if (partsOutput) partsOutput.textContent = partsRange.value;
+    if (partsInput)  partsInput.value       = partsRange.value; // <-- sync vers l’input
+    partsRange.addEventListener('input', function(){
+      updatePartsFill(this);
+      if (partsOutput) partsOutput.textContent = this.value;
+      if (partsInput)  partsInput.value       = this.value;     // <-- sync en live
+    });
+  }
+
+  // Elements requis
+  const range  = document.getElementById('tmi-range');
+  const output = document.getElementById('tmi-output');
+  const tmiInput = document.getElementById('tmi_valeur');
+  const ticksC = document.querySelector('.tmi-ticks');
+
+  if(!range) return; // sécurité
+
+  // Valeurs autorisées (TMI)
+  const TMI = [0, 11, 30, 41, 45];
+
+  // Max du slider (doit être 45 si on reste en TMI pur)
+  const max = parseInt(range.max || '45', 10);
+
+  // Render des ticks
+  if (ticksC){
+    ticksC.innerHTML = '';
+    TMI.forEach(v => {
+      const pct = (v / max) * 100;
+      const tick = document.createElement('div');
+      tick.className = 'tick';
+      tick.style.left = pct + '%';
+      tick.innerHTML = '<div class="dot"></div><div class="label">'+v+'%</div>';
+      ticksC.appendChild(tick);
+    });
+  }
+
+  // Mise à jour remplissage (WebKit via --fill ; Firefox gère ::-moz-range-progress)
+  function updateFill(el){
+    const min = +el.min || 0, maxv = +el.max || 100, val = +el.value || 0;
+    const pct = ((val - min) / (maxv - min)) * 100;
+    el.style.setProperty('--fill', pct + '%');
+  }
+
+  // Trouver la valeur autorisée la plus proche
+  function snap(val){
+    return TMI.reduce((best, v) =>
+      Math.abs(v - val) < Math.abs(best - val) ? v : best
+    , TMI[0]);
+  }
+
+  // Mise à jour affichage texte
+  function updateOutput(val){
+    if (output) output.textContent = val + '%';
+    if (tmiInput)  tmiInput.value       = val;
+  }
+
+
+  // Init : snap la valeur de départ, remplit la piste, maj texte
+  (function init(){
+    const start = snap(parseInt(range.value || '0', 10));
+    range.value = start;
+    updateFill(range);
+    updateOutput(start);
+  })();
+
+  // Pendant le drag : remplissage fluide + texte fluide
+  range.addEventListener('input', function(){
+    updateFill(this);
+    updateOutput(parseInt(this.value || '0', 10));
+  });
+
+  // En fin de drag : snap sur {0,11,30,41,45} + sync fill/texte
+  ['change','mouseup','touchend','keyup','blur'].forEach(evt => {
+    range.addEventListener(evt, function(){
+      const snapped = snap(parseInt(this.value || '0', 10));
+      this.value = snapped;
+      updateFill(this);
+      updateOutput(snapped);
+    });
+  });
+
   function showError($field, message) {
     const $formGroup = $field.closest('.form-group');
     if ($formGroup.find('.error-message').length === 0) {
@@ -239,7 +333,7 @@
 
       // TMI/parts
       const $tmiOui      = jQuery('#tmi-oui');
-      const $tmiField    = jQuery('#tmi');
+      const $tmiField    = jQuery('#tmi_valeur');
       const $partField   = jQuery('#part');
 
       // D2
@@ -522,7 +616,7 @@
           <div class="stat"><h4>Plafond non utilisé pour le PER</h4><div class="value">${formatEuro(d.plafonds?.non_utilise)}</div><div class="small">Disponible pour cette année</div></div>
           <div class="stat"><h4>Plafond actuel pour le PER</h4><div class="value">${formatEuro(d.plafonds?.actuel)}</div><div class="small">Disponible pour cette année</div></div>
           <div class="stat"><h4>Économie d’impôt totale</h4><div class="value">${formatEuro(d.economie?.totale)}</div><div class="small">Sur toute la période</div></div>
-          <div class="stat"><h4>Nombre d’années de déduction</h4><div class="value">${d.economie?.nb_annees ?? '-'}</div><div class="small">Années restantes</div></div>
+          <div class="stat"><h4>Nombre d’années de déduction</h4><div class="value">${d.economie?.nb_annees}</div><div class="small">Années restantes</div></div>
           <div class="stat"><h4>Taux marginal d’imposition (TMI)</h4><div class="value">${Math.round((tmi ?? d.tmi)*100)}%</div><div class="small">Votre tranche</div></div>
         </div>
         <div class="advice">

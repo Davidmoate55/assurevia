@@ -653,18 +653,12 @@ function calcul_plafonds_structures($anneeCotisation, $PASS, $salaireDefault, $r
 
     return [
         "plafond_non_utilise_{$declarant}" => round($plafond_non_utilise, 0),
-        "plafond_revenus_{$declarant}"     => round($plafond_revenus,0),
+        "plafond_revenus_{$declarant}"     => round($plafond_revenus,0)
     ];
 }
 
 function calculer_tmi(array $contexte, array $tranches): float{
-    // 1) TMI connu
-    if (!empty($contexte['connait_tmi']) && $contexte['connait_tmi'] === true) {
-        $tmi_valeur = isset($contexte['tmi_valeur']) ? (float)$contexte['tmi_valeur'] : null;
-        return ($tmi_valeur !== null && $tmi_valeur >= 0) ? $tmi_valeur : 0.0;
-    }
-
-    // 2) Calcul via quotient familial
+    // Calcul via quotient familial
     $nb_personne = isset($contexte['nb_personne']) ? (int)$contexte['nb_personne'] : 1;
 
     $salaires_1   = isset($contexte['salaires_1'])   ? (float)$contexte['salaires_1']   : 0.0;

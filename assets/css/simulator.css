@@ -1750,3 +1750,217 @@ label.required::after {
   font-weight: 600 !important;
   color: #0f3742;
 }
+
+/* container */
+.tmi-slider-wrap {
+  border: solid 3px #fff;
+  max-width: 640px;
+  margin: 0px auto;
+  background: #f0f7fa;
+  padding: 3px 18px 3px 20px;
+  border-radius: 100px;
+  color: #e8ecef;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* Variables + range */
+#tmi-range{
+  --track-h: 20px;     /* hauteur visible de la piste (hors bordure) */
+  --track-b: 2px;      /* épaisseur de la bordure blanche du track */
+  --thumb-d: 28px;     /* diamètre du curseur */
+  --accent: #4fa79b;
+  --fill: 0%;
+
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  margin: 12px 0 10px;
+  outline: none;
+  border: none;
+}
+
+/* Row: slider + valeur alignés verticalement */
+.tmi-range-row{
+  display: flex;
+  align-items: center;     /* <-- centre verticalement le % */
+  gap: 22px;
+}
+
+/* WebKit/Chromium track */
+#tmi-range::-webkit-slider-runnable-track{
+  height: var(--track-h);
+  border-radius: 999px;
+  background:
+    linear-gradient(var(--accent), var(--accent)) no-repeat,
+    #ffffff;
+  background-size: var(--fill) 100%, 100% 100%;
+  border: var(--track-b) solid #ffffff;  /* contour blanc */
+  box-shadow: none;
+}
+
+/* WebKit/Chromium thumb — compensation de la bordure du track */
+#tmi-range::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--thumb-d);
+  height: var(--thumb-d);
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #ffffff;
+
+  /* centre = (track - thumb)/2, puis retire la bordure du track */
+  margin-top: calc((var(--track-h) - var(--thumb-d)) / 2 - var(--track-b));
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+
+/* Firefox */
+#tmi-range::-moz-range-track{
+  height: calc(var(--track-h));
+  border-radius: 999px;
+  background: #ffffff;
+  border: var(--track-b) solid #ffffff;
+}
+#tmi-range::-moz-range-progress{
+  height: calc(var(--track-h));
+  border-radius: 999px;
+  background: var(--accent);
+}
+#tmi-range::-moz-range-thumb{
+  width: var(--thumb-d);
+  height: var(--thumb-d);
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #ffffff;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+
+/* Valeur (%), bien centrée verticalement avec la row */
+#tmi-output{
+  display: inline-block;
+  min-width: 38px;
+  line-height: 1;           /* évite un décalage vertical */
+  font-weight: 700;
+  color: #5C6368;
+}
+
+
+/* Ticks sous la piste */
+.tmi-ticks{ position: relative; margin-top: 10px; height: 26px; }
+.tmi-ticks .tick{
+  position: absolute; top: 0; transform: translateX(-50%);
+  text-align: center; color: #5C6368; font-size: 12px;
+}
+.tmi-ticks .tick .dot{
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #cfd8df; margin: 0 auto 6px;
+}
+.tmi-ticks .tick .label{ white-space: nowrap; }
+@media (max-width:420px){ .tmi-ticks .tick .label{ font-size:11px; } }
+
+#parts-range{
+  --track-h: 20px;
+  --track-b: 2px;
+  --thumb-d: 28px;
+  --accent: #4fa79b;
+  --fill: 0%;
+
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  margin: 12px 0 10px;
+  outline: none;
+  border: none;
+}
+
+.parts-range-row{
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+/* WebKit */
+#parts-range::-webkit-slider-runnable-track{
+  height: var(--track-h);
+  border-radius: 999px;
+  background:
+    linear-gradient(var(--accent), var(--accent)) no-repeat,
+    #ffffff;
+  background-size: var(--fill) 100%, 100% 100%;
+  border: var(--track-b) solid #ffffff;
+  box-shadow: none;
+}
+
+#parts-range::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--thumb-d);
+  height: var(--thumb-d);
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #ffffff;
+  margin-top: calc((var(--track-h) - var(--thumb-d)) / 2 - var(--track-b));
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+
+/* Firefox */
+#parts-range::-moz-range-track{
+  height: calc(var(--track-h));
+  border-radius: 999px;
+  background: #ffffff;
+  border: var(--track-b) solid #ffffff;
+}
+#parts-range::-moz-range-progress{
+  height: calc(var(--track-h));
+  border-radius: 999px;
+  background: var(--accent);
+}
+#parts-range::-moz-range-thumb{
+  width: var(--thumb-d);
+  height: var(--thumb-d);
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #ffffff;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+
+/* Output */
+#parts-output{
+  min-width: 36px;
+  text-align: right;
+  font-weight: 500;
+  color: #5C6368;
+  line-height: 1;
+  font-size: 18px;
+}
+
+/* Graduation (ticks) */
+#parts-ticks{
+  position: relative;
+  height: 20px;
+  margin-top: 6px;
+}
+#parts-ticks .tick{
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 12px;
+  color: #5C6368;
+}
+/* container */
+.parts-slider-wrap {
+  border: solid 3px #fff;
+  max-width: 640px;
+  margin: 0px auto;
+  background: #f0f7fa;
+  padding: 3px 18px 3px 20px;
+  border-radius: 100px;
+  color: #e8ecef;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
