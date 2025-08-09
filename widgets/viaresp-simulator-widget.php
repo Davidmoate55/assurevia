@@ -74,12 +74,12 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                       <span class="tooltip-wrapper" tabindex="0" aria-label="Informations sur les profils d'épargne">
                                         <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                           <circle cx="12" cy="12" r="11" fill="#4fa79b" />
-                                          <text x="12.5" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
+                                          <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
                                         </svg>
                                         <div class="tooltip" role="tooltip">
                                           <div class="tooltip-arrow" data-popper-arrow></div>
-                                          <div class="tooltip-content">
-                                            <strong>Valeurs indicatives :</strong> Le profil prudent concerne les indépendants soucieux de la pérennité de leur épargne, le profil équilibré correspond à un équilibre entre performance financière et épargne sécurisée, le profil dynamique s’adresse à des épargnants désireux d’obtenir des performances élevées.
+                                          <div class="tooltip-content" id="profil-tooltip-content">
+                                            <!-- Le texte sera injecté ici selon le profil sélectionné -->
                                           </div>
                                         </div>
                                       </span>
@@ -248,12 +248,12 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                       <span class="tooltip-wrapper" tabindex="0" aria-label="Informations sur les profils d'épargne">
                                         <svg class="info-icon" width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                           <circle cx="12" cy="12" r="11" fill="#4fa79b" />
-                                          <text x="12.5" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
+                                          <text x="12" y="16.5" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" dy="0.1em" font-family="system-ui, sans-serif">i</text>
                                         </svg>
                                         <div class="tooltip" role="tooltip">
                                           <div class="tooltip-arrow" data-popper-arrow></div>
-                                          <div class="tooltip-content">
-                                            <strong>Valeurs indicatives :</strong> Le profil prudent concerne les indépendants soucieux de la pérennité de leur épargne, le profil équilibré correspond à un équilibre entre performance financière et épargne sécurisée, le profil dynamique s’adresse à des épargnants désireux d’obtenir des performances élevées.
+                                          <div class="tooltip-content" id="profil2-tooltip-content">
+                                            <!-- Le texte sera injecté ici selon le profil sélectionné -->
                                           </div>
                                         </div>
                                       </span>
@@ -290,7 +290,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                         <div class="tooltip" role="tooltip">
                                           <div class="tooltip-arrow" data-popper-arrow></div>
                                           <div class="tooltip-content">
-                                            <strong>Valeurs indicatives :</strong> Le profil prudent concerne les indépendants soucieux de la pérennité de leur épargne, le profil équilibré correspond à un équilibre entre performance financière et épargne sécurisée, le profil dynamique s’adresse à des épargnants désireux d’obtenir des performances élevées.
+                                            <strong>Le TMI figure sur votre avis d’imposition</strong>, dans la partie « Informations fiscales ». Vous pouvez aussi l’estimer avec un notre simulateur en fonction de votre revenu imposable et de votre nombre de parts.
                                           </div>
                                         </div>
                                       </span>
@@ -319,14 +319,14 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                       <div class="tooltip" role="tooltip">
                                         <div class="tooltip-arrow" data-popper-arrow></div>
                                         <div class="tooltip-content">
-                                          <strong>Nombre de part</strong> Correspond ...
+                                          <strong>Nombre de parts fiscales</strong> utilisé pour calculer l’impôt. 1 part pour un célibataire, 2 parts pour un couple, +0,5 part par enfant à charge. Plus de parts réduit l’impôt.
                                         </div>
                                       </div>
                                     </span>
                                     <div class="parts-slider-wrap">
                                       <div class="parts-range-row">
                                         <div id="parts-output">1</div>
-                                        <input type="range" id="parts-range" min="1" max="10" step="1" value="1">
+                                        <input type="range" id="parts-range" min="1" max="10" step="0.5" value="1">
                                         <input type="hidden" id="part" name="part" value="1">
                                       </div>
                                     </div>
@@ -343,7 +343,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                       <div class="tooltip" role="tooltip">
                                         <div class="tooltip-arrow" data-popper-arrow></div>
                                         <div class="tooltip-content">
-                                          <strong>Votre taux marginal d'imposition</strong> Correspond ...
+                                          <strong>Taux marginal d’imposition </strong>appliqué uniquement sur la dernière tranche de vos revenus. Sert à mesurer l’intérêt fiscal du PER : plus il est élevé, plus la déduction est avantageuse.
                                         </div>
                                       </div>
                                     </span>
@@ -374,7 +374,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                       <div class="tooltip" role="tooltip">
                                         <div class="tooltip-arrow" data-popper-arrow></div>
                                         <div class="tooltip-content">
-                                          <strong>Salaires annuels nets imposables N-1</strong>
+                                          <strong>Salaires nets imposables N-1:</strong> Montant total de vos salaires nets imposables de l’année précédente, indiqué sur votre dernier avis d’imposition, rubrique « Revenus d’activité ».
                                         </div>
                                       </div>
                                     </span>
@@ -395,7 +395,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                         <div class="tooltip-content">
                                           <strong>Revenu travailleur non salarié</strong><br>
                                           Indiquez votre revenu net imposable.
-                                          <br><br>
+                                          <br>
                                           <u>Micro-entrepreneurs</u> : indiquez votre chiffre d’affaires <strong>après abattement forfaitaire</strong> (34 %, 50 % ou 71 % selon votre activité).
                                           <br>
                                           <u>Régime réel</u> ou <u>gérant majoritaire</u> : indiquez votre revenu professionnel net imposable (avant impôt sur le revenu).
@@ -450,7 +450,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                       <div class="tooltip" role="tooltip">
                                         <div class="tooltip-arrow" data-popper-arrow></div>
                                         <div class="tooltip-content">
-                                          <strong>Salaires nets imposables N-1</strong>
+                                          <strong>Salaires nets imposables N-1:</strong> Montant total de vos salaires nets imposables de l’année précédente, indiqué sur votre dernier avis d’imposition, rubrique « Revenus d’activité ».
                                         </div>
                                       </div>
                                     </span>
@@ -471,7 +471,7 @@ class ViaResp_Simulator_Widget extends Widget_Base {
                                         <div class="tooltip-content">
                                           <strong>Revenu travailleur non salarié</strong><br>
                                           Indiquez votre revenu net imposable.
-                                          <br><br>
+                                          <br>
                                           <u>Micro-entrepreneurs</u> : indiquez votre chiffre d’affaires <strong>après abattement forfaitaire</strong> (34 %, 50 % ou 71 % selon votre activité).
                                           <br>
                                           <u>Régime réel</u> ou <u>gérant majoritaire</u> : indiquez votre revenu professionnel net imposable (avant impôt sur le revenu).

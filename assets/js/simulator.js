@@ -547,47 +547,111 @@
         scrollTop: $('#calendly-inline-widget').offset().top - 20
       }, 400);
     });
-    $('.tooltip-wrapper').each(function() {
-      const $wrapper = $(this);
-      const $tooltip = $wrapper.find('.tooltip');
+      // 1) Déplacer la tooltip au niveau de .form-group (pleine largeur, au-dessus)
+      $('.tooltip-wrapper').each(function(){
+        const $wrap  = $(this);
+        const $tip   = $wrap.find('.tooltip');
+        const $group = $wrap.closest('.form-group');
+        if ($tip.length && $group.length && !$tip.parent().is($group)) {
+          $tip.attr('tabindex', '-1');          // ne prend jamais le focus
+          $tip.appendTo($group);
+        }
+      });
 
-      // Échap pour fermer
-      $wrapper.on('keydown', function(e) {
-        if (e.key === 'Escape' || e.keyCode === 27) {
-          if ($tooltip.length) {
-            $tooltip.css({ opacity: 0, pointerEvents: 'none', transform: 'translate(-50%, 8px)' });
+      const $allTips = $('.form-group .tooltip');
+
+      function closeAllTips(){ $allTips.removeClass('is-open').attr('aria-hidden','true'); }
+
+      function openTip($tip){
+        if (!$tip || !$tip.length) return;
+        closeAllTips(); // OK : on ferme les autres à l’ouverture
+        $tip.addClass('is-open').attr('aria-hidden','false');
+      }
+
+      // 2) Hover icône : ouvre. Quitter l’icône : ferme si aucun input du groupe n’est focus
+      $(document).on('mouseenter', '.tooltip-wrapper', function(){
+        const $tip = $(this).closest('.form-group').find('.tooltip');
+        openTip($tip);
+      });
+      $(document).on('mouseleave', '.tooltip-wrapper', function(){
+        const $group = $(this).closest('.form-group');
+        if ($group.find(':input').is(':focus')) return; // si un champ est focus, on laisse ouvert
+        $group.find('.tooltip').removeClass('is-open').attr('aria-hidden','true'); // ferme seulement celle du groupe
+      });
+
+      // 3) Focus gestion — utiliser focusin/focusout (bubblent) pour FIABILISER les <input type="text">
+      $(document).on('focusin', '.form-group :input', function(){
+        const $tip = $(this).closest('.form-group').find('.tooltip');
+        openTip($tip);
+      });
+
+      // 3) Focus gestion — fermer uniquement la tooltip du groupe qui perd le focus
+      $(document).on('focusout', '.form-group :input', function(){
+        const $group = $(this).closest('.form-group');
+        // très court délai pour laisser le temps au nouvel input de prendre le focus
+        setTimeout(function(){
+          const active = document.activeElement;
+          const focusIsInsideSameGroup = $group.has(active).length > 0;
+          const hoverIcon = $group.find('.tooltip-wrapper:hover').length > 0;
+
+          if (!focusIsInsideSameGroup && !hoverIcon) {
+            // ⬇️ on ferme SEULEMENT la tooltip de CE groupe
+            $group.find('.tooltip').removeClass('is-open').attr('aria-hidden','true');
           }
+        }, 0); // délai minimal pour éviter la course avec focusin
+      });
+
+      $(document).on('pointerdown', function(e){
+        // On ne ferme que si on clique VRAIMENT en dehors du formulaire
+        if ($(e.target).closest('.form-group').length === 0) {
+          closeAllTips();
         }
       });
 
-      // Toggle au clic (utile sur mobile)
-      $wrapper.on('click', function(e) {
-        if (!$tooltip.length) return;
-        const isVisible = parseFloat($tooltip.css('opacity')) === 1;
-        if (isVisible) {
-          $tooltip.css({ opacity: 0, pointerEvents: 'none', transform: 'translate(-50%, 8px)' });
-        } else {
-          $tooltip.css({ opacity: 1, pointerEvents: 'auto', transform: 'translate(-50%, 4px)' });
-        }
-        e.stopPropagation();
+      // 5) ESC pour fermer
+      $(document).on('keydown', function(e){
+        if (e.key === 'Escape' || e.keyCode === 27) closeAllTips();
       });
 
-      // Clic en dehors pour fermer
-      $(document).on('click', function(e) {
-        if (!$wrapper.is(e.target) && $wrapper.has(e.target).length === 0) {
-          if ($tooltip.length) {
-            $tooltip.css({ opacity: 0, pointerEvents: 'none', transform: 'translate(-50%, 8px)' });
-          }
+    // Textes courts par profil (valeurs 3, 6, 9)
+      const PROFIL_TEXT = {
+        3: "<strong>Profil prudent</strong> capital sécurisé rendement limité adapté si horizon court ou aversion au risque",
+        6: "<strong>Profil équilibré</strong> actions et obligations pour équilibre performance et sécurité horizon 5 à 8 ans",
+        9: "<strong>Profil dynamique</strong> forte part actions rendement élevé long terme horizon 10 ans et plus"
+      };
+
+      const $tip = $('#profil-tooltip-content')
+      const $tip2 = $('#profil2-tooltip-content');
+
+      const $radiosProfil1 = $('input[name="profil"]');
+      const $radiosProfil2 = $('input[name="profil2"]');
+
+      function majTooltipProfil(){
+        const val = $radiosProfil1.filter(':checked').val();
+        if ($tip.length && val && PROFIL_TEXT[val]) {
+          $tip.html(PROFIL_TEXT[val]);
         }
-      });
-    });
+        const val2 = $radiosProfil2.filter(':checked').val();
+        if ($tip2.length && val2 && PROFIL_TEXT[val2]) {
+          $tip2.html(PROFIL_TEXT[val2]);
+        }
+      }
+
+      // Initialisation + mise à jour au changement
+      majTooltipProfil();
+      $radiosProfil1.on('change', majTooltipProfil);
+
+      // Initialisation + mise à jour au changement
+      majTooltipProfil();
+      $radiosProfil2.on('change', majTooltipProfil);
+
     initInternationalPhone();
     handlePERForm();
     handlePERFormSansAvis();
     animateSimulateurButton();
   });
   function formatEuro(val) {
-    return val ? (Math.round(val).toLocaleString('fr-FR') + ' €') : '-';
+    return val ? (Math.round(val).toLocaleString('fr-FR') + ' €') : '0€';
   }
   function showPERPopupAfterResult() {
     setTimeout(function() {
@@ -600,7 +664,7 @@
         <div class="heading">
           <div>
             <div class="badge">PER - ${label}</div>
-            <h1 class="name">${d.prenom ? d.prenom.toUpperCase() + ' ' + d.nom.toUpperCase() : ''}</h1>
+            <h1 class="name">${d.prenom ? d.prenom + ' ' + d.nom : ''}</h1>
             <div class="sub">TMI ${Math.round((tmi ?? d.tmi)*100)}% · Retraite à 64 ans</div>
           </div>
           <div>
@@ -615,6 +679,8 @@
           <div class="stat"><h4>Capital à la retraite</h4><div class="value">${formatEuro(d.capital_final)}</div><div class="small">Capital estimé avec la plus value</div></div>
           <div class="stat"><h4>Plafond non utilisé pour le PER</h4><div class="value">${formatEuro(d.plafonds?.non_utilise)}</div><div class="small">Disponible pour cette année</div></div>
           <div class="stat"><h4>Plafond actuel pour le PER</h4><div class="value">${formatEuro(d.plafonds?.actuel)}</div><div class="small">Disponible pour cette année</div></div>
+          ${(d.plafonds?.transfere_recu ?? 0) > 0 ? `<div class="stat"><h4>Plafond transféré reçu</h4><div class="value">${formatEuro(d.plafonds.transfere_recu)}</div><div class="small">Utilisé depuis l’autre déclarant</div></div>` : ''}
+          ${typeof d.plafonds?.restant === 'number' ? `<div class="stat"><h4>Plafond restant</h4><div class="value">${formatEuro(d.plafonds.restant)}</div><div class="small">Après transferts (année en cours)</div></div>  ` : ''}
           <div class="stat"><h4>Économie d’impôt totale</h4><div class="value">${formatEuro(d.economie?.totale)}</div><div class="small">Sur toute la période</div></div>
           <div class="stat"><h4>Nombre d’années de déduction</h4><div class="value">${d.economie?.nb_annees}</div><div class="small">Années restantes</div></div>
           <div class="stat"><h4>Taux marginal d’imposition (TMI)</h4><div class="value">${Math.round((tmi ?? d.tmi)*100)}%</div><div class="small">Votre tranche</div></div>

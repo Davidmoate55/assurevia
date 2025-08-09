@@ -101,6 +101,8 @@ function handle_simulation_perin_avec_avis() {
             'plafonds' => [
                 'non_utilise' => $plafond_non_utilise1,
                 'actuel'       => $plafond_revenus_declarant1,
+                'transfere_recu'=> $economiesImpotsPluriannuelles['declarant1']['plafond_transfere'] ?? 0.0, // reçu depuis D1
+                'restant'       => $economiesImpotsPluriannuelles['declarant1']['plafond_restant']   ?? 0.0, // après transferts              
             ],
             'economie' => [
                 'totale'    => $economiesImpotsPluriannuelles['declarant1']['economie_totale'] ?? 0.0,
@@ -120,6 +122,8 @@ function handle_simulation_perin_avec_avis() {
             'plafonds' => [
                 'non_utilise' => $plafond_non_utilise2,
                 'actuel'       => $plafond_revenus_declarant2,
+                'transfere_recu'=> $economiesImpotsPluriannuelles['declarant2']['plafond_transfere'] ?? 0.0, // reçu depuis D1
+                'restant'       => $economiesImpotsPluriannuelles['declarant2']['plafond_restant']   ?? 0.0, // après transferts
             ],
             'economie' => [
                 'totale'    => $economiesImpotsPluriannuelles['declarant2']['economie_totale'] ?? 0.0,
@@ -204,8 +208,8 @@ function handle_simulation_perin_sans_avis() {
         'message'                 => "Les résultats fournis par ce simulateur sont des estimations à titre indicatif. Pour une évaluation précise et complète de vos économies d'impôts, veuillez vous référer à votre dernier avis d'impôt. Investir comporte des risques de perte en capital.",
         'tmi'                     => $tmi,
         'declarant1' => [
-            'nom'      => 'de ma simulation PER',
-            'prenom'   => 'Résultat',
+            'nom'      => 'résultat',
+            'prenom'   => 'Mon',
             'versements_mensuel'  => $versement ?? '',
             'versements_annuel'   => $montantAnnuelDeclarant1 ?? '',
             'versements_cumules'  => $interetComposeDeclarant1['versements_cumules'] ?? 0.0,
@@ -214,6 +218,8 @@ function handle_simulation_perin_sans_avis() {
             'plafonds' => [
                 'non_utilise' => $plafond_non_utilise1,
                 'actuel'       => $plafond_revenus_declarant1,
+                'transfere_recu'=> $economiesImpotsPluriannuelles['declarant1']['plafond_transfere'] ?? 0.0, // reçu depuis D1
+                'restant'       => $economiesImpotsPluriannuelles['declarant1']['plafond_restant']   ?? 0.0, // après transferts
             ],
             'economie' => [
                 'totale'    => $economiesImpotsPluriannuelles['declarant1']['economie_totale'] ?? 0.0,
@@ -233,6 +239,8 @@ function handle_simulation_perin_sans_avis() {
             'plafonds' => [
                 'non_utilise' => $plafond_non_utilise2,
                 'actuel'       => $plafond_revenus_declarant2,
+                'transfere_recu'=> $economiesImpotsPluriannuelles['declarant2']['plafond_transfere'] ?? 0.0, // reçu depuis D1
+                'restant'       => $economiesImpotsPluriannuelles['declarant2']['plafond_restant']   ?? 0.0, // après transferts
             ],
             'economie' => [
                 'totale'    => $economiesImpotsPluriannuelles['declarant2']['economie_totale'] ?? 0.0,

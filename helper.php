@@ -64,74 +64,115 @@ function extraireInfosFiscalesImages(string $text): array {
         'plafond_revenus_declarant2' => $plafond_calcule_declarant2
     ];
 }
+function calculEconomiesImpotsPluriannuelles(
+    $tmi,
+    $montantAnnuelDeclarant1,
+    $montantAnnuelDeclarant2,
+    $plafond_non_utilise1,
+    $plafond_non_utilise2,
+    $plafond_revenus_declarant1,
+    $plafond_revenus_declarant2,
+    $age1,
+    $age2,
+    $age_retraite = 64
+) {
+    // Cast & validation
+    $tmi = (float)$tmi;
+    $montantAnnuelDeclarant1    = (float)$montantAnnuelDeclarant1;
+    $montantAnnuelDeclarant2    = (float)$montantAnnuelDeclarant2;
+    $plafond_non_utilise1       = (float)$plafond_non_utilise1;
+    $plafond_non_utilise2       = (float)$plafond_non_utilise2;
+    $plafond_revenus_declarant1 = (float)$plafond_revenus_declarant1;
+    $plafond_revenus_declarant2 = (float)$plafond_revenus_declarant2;
+    $age1 = (int)$age1; $age2 = (int)$age2; $age_retraite = (int)$age_retraite;
 
-function calculEconomiesImpotsPluriannuelles($tmi,$montantAnnuelDeclarant1,$montantAnnuelDeclarant2,$plafond_non_utilise1,$plafond_non_utilise2,$plafond_revenus_declarant1,$plafond_revenus_declarant2,$age1,$age2,$age_retraite = 64) {
-    // Cast et validation des paramètres
-    $tmi                         = floatval($tmi);
-    $montantAnnuelDeclarant1     = floatval($montantAnnuelDeclarant1);
-    $montantAnnuelDeclarant2     = floatval($montantAnnuelDeclarant2);
-    $plafond_non_utilise1        = floatval($plafond_non_utilise1);
-    $plafond_non_utilise2        = floatval($plafond_non_utilise2);
-    $plafond_revenus_declarant1  = floatval($plafond_revenus_declarant1);
-    $plafond_revenus_declarant2  = floatval($plafond_revenus_declarant2);
-    $age1                        = intval($age1);
-    $age2                        = intval($age2);
-    $age_retraite                = intval($age_retraite);
-
-    // Si le TMI est invalide, on retourne à zéro
     if ($tmi <= 0) {
         return [
-            'declarant1' => ['economie_totale' => 0, 'nb_annees' => 0],
-            'declarant2' => ['economie_totale' => 0, 'nb_annees' => 0],
+            'declarant1' => ['economie_totale'=>0,'nb_annees'=>0,'plafond_transfere'=>0,'plafond_restant'=>0],
+            'declarant2' => ['economie_totale'=>0,'nb_annees'=>0,'plafond_transfere'=>0,'plafond_restant'=>0],
         ];
     }
 
-    // Nombre d'années restantes avant retraite
     $nb_annees1 = max(0, $age_retraite - $age1);
     $nb_annees2 = max(0, $age_retraite - $age2);
 
-    $economie_declarant1 = 0;
-    $economie_declarant2 = 0;
+    $economie_declarant1 = 0.0;
+    $economie_declarant2 = 0.0;
 
-    // ----- DÉCLARANT 1 -----
-    if ($nb_annees1 > 0 && $montantAnnuelDeclarant1 > 0) {
-        // 1ère année : plafond_revenus + plafond_non_utilise
-        $plafond1_annee1 = $plafond_revenus_declarant1 + $plafond_non_utilise1;
-        $deductible1 = min($montantAnnuelDeclarant1, $plafond1_annee1);
+    $plafond_transfere_vers_1 = 0.0;
+    $plafond_transfere_vers_2 = 0.0;
+
+    // Valeurs par défaut si pas d'années
+    $reste_plafond_1 = 0.0;
+    $reste_plafond_2 = 0.0;
+
+    // ---- 1ère année : chacun utilise son plafond (revenus + non utilisé) ----
+    if ($nb_annees1 > 0) {
+        $plafond_total_1 = $plafond_revenus_declarant1 + $plafond_non_utilise1;
+        $deductible1     = min($montantAnnuelDeclarant1, $plafond_total_1);
+        $reste_plafond_1 = max(0.0, $plafond_total_1 - $deductible1);
         $economie_declarant1 += $deductible1 * $tmi;
+    }
 
-        // années suivantes : on utilise chaque année le seul plafond_non_utilise
-        for ($an = 2; $an <= $nb_annees1; $an++) {
-            $deductible = min($montantAnnuelDeclarant1, $plafond_non_utilise1);
-            $economie_declarant1 += $deductible * $tmi;
+    if ($nb_annees2 > 0) {
+        $plafond_total_2 = $plafond_revenus_declarant2 + $plafond_non_utilise2;
+        $deductible2     = min($montantAnnuelDeclarant2, $plafond_total_2);
+        $reste_plafond_2 = max(0.0, $plafond_total_2 - $deductible2);
+        $economie_declarant2 += $deductible2 * $tmi;
+    }
+
+    // ---- Redistribution de plafond (1ère année uniquement) si 2 déclarants valides ----
+    if ($nb_annees1 > 0 && $nb_annees2 > 0 && $montantAnnuelDeclarant1 > 0 && $montantAnnuelDeclarant2 > 0) {
+        // D1 -> D2
+        if ($reste_plafond_1 > 0 && $montantAnnuelDeclarant2 > ($plafond_revenus_declarant2 + $plafond_non_utilise2)) {
+            $besoin2   = $montantAnnuelDeclarant2 - ($plafond_revenus_declarant2 + $plafond_non_utilise2);
+            $utilise12 = min($reste_plafond_1, $besoin2);
+            if ($utilise12 > 0) {
+                $economie_declarant2   += $utilise12 * $tmi;
+                $plafond_transfere_vers_2 = $utilise12;
+                $reste_plafond_1       -= $utilise12;
+            }
+        }
+        // D2 -> D1
+        if ($reste_plafond_2 > 0 && $montantAnnuelDeclarant1 > ($plafond_revenus_declarant1 + $plafond_non_utilise1)) {
+            $besoin1   = $montantAnnuelDeclarant1 - ($plafond_revenus_declarant1 + $plafond_non_utilise1);
+            $utilise21 = min($reste_plafond_2, $besoin1);
+            if ($utilise21 > 0) {
+                $economie_declarant1   += $utilise21 * $tmi;
+                $plafond_transfere_vers_1 = $utilise21;
+                $reste_plafond_2       -= $utilise21;
+            }
         }
     }
 
-    // ----- DÉCLARANT 2 -----
-    if ($nb_annees2 > 0 && $montantAnnuelDeclarant2 > 0) {
-        // 1ère année : plafond_revenus + plafond_non_utilise
-        $plafond2_annee1 = $plafond_revenus_declarant2 + $plafond_non_utilise2;
-        $deductible2 = min($montantAnnuelDeclarant2, $plafond2_annee1);
-        $economie_declarant2 += $deductible2 * $tmi;
-
-        // années suivantes : on utilise chaque année le seul plafond_non_utilise
+    // ---- Années suivantes : on ne simule que le plafond_non_utilise, sans transfert ----
+    if ($nb_annees1 > 1) {
+        for ($an = 2; $an <= $nb_annees1; $an++) {
+            $economie_declarant1 += min($montantAnnuelDeclarant1, $plafond_non_utilise1) * $tmi;
+        }
+    }
+    if ($nb_annees2 > 1) {
         for ($an = 2; $an <= $nb_annees2; $an++) {
-            $deductible = min($montantAnnuelDeclarant2, $plafond_non_utilise2);
-            $economie_declarant2 += $deductible * $tmi;
+            $economie_declarant2 += min($montantAnnuelDeclarant2, $plafond_non_utilise2) * $tmi;
         }
     }
 
     return [
         'declarant1' => [
-            'economie_totale' => round($economie_declarant1, 2),
-            'nb_annees'       => $nb_annees1
+            'economie_totale'   => round($economie_declarant1, 2),
+            'nb_annees'         => $nb_annees1,
+            'plafond_transfere' => round($plafond_transfere_vers_1, 2), // pris chez D2
+            'plafond_restant'   => round(max(0.0, $reste_plafond_1), 2), // reste à D1 après transferts
         ],
         'declarant2' => [
-            'economie_totale' => round($economie_declarant2, 2),
-            'nb_annees'       => $nb_annees2
-        ]
+            'economie_totale'   => round($economie_declarant2, 2),
+            'nb_annees'         => $nb_annees2,
+            'plafond_transfere' => round($plafond_transfere_vers_2, 2), // pris chez D1
+            'plafond_restant'   => round(max(0.0, $reste_plafond_2), 2), // reste à D2 après transferts
+        ],
     ];
 }
+
 
 function pdfToImages(string $pdfPath): array {
     $uploadDir = wp_upload_dir();
@@ -589,25 +630,34 @@ function getPromptSansAvis($age1, $age2, $data, $versementMensuel1, $versementMe
   - conseil_personnalise_declarant2
   Consignes pour chaque champ :
   **Très important l'astuce et le conseil personnalisé par déclarant doivent etre strictement différents.**
-  Pour info le TMI du foyer fiscal est de {$tmi}%.
-  Pour astuce_declarantX :
-  Une phrase, 250 caractères max, personnalisée, qui propose une action concrète pour optimiser le PER : ajuster les versements (pour annuler l’impôt), prioriser les plafonds non utilisés, ajuster le rythme, etc.
-  L’astuce doit être différente du conseil et différente entre les deux déclarants.
-  Pour conseil_personnalise_declarantX :
-  Une phrase, 250 caractères max, personnalisée, qui donne un conseil concret (priorisation, rythme, plafond, etc.), ton simple, confiant et rassurant.
-  Différent de l’astuce et personnalisé pour chaque déclarant. Si TMI ≤ 0.11 et impôt quasi nul, propose une alternative (ex : assurance-vie), sinon focus PER.
-  - exemple_astuce :  Mettez en place un versement automatique de XXX € par mois, vous lisserez le risque de marché tout en utilisant progressivement votre plafond courant.
-                      Programmez vos virements juste après la paie : vous épargnez avant de dépenser et sécurisez votre rythme.
-                      Augmentez automatiquement l'épargne mensuelle de 3 % chaque année pour suivre l’inflation sans y penser.
-                      Scindez vos virements en deux dates (début et milieu de mois) pour lisser encore mieux l’effet de marché.
-                      Versez votre prime annuelle en janvier : vous profitez toute l’année des intérêts composés.
-                      Coupez le versement unique : 60 % maintenant, 40 % en fin d’année pour garder de la trésorerie et lisser le timing.
-  - exemple_conseil : Utilisez XX € de prime unique cette année pour absorber d’un coup votre plafond non utilisé et annuler la quasi-totalité de votre impôt.
-                      Priorisez d’abord les 17 000 € de plafond non utilisé : c’est la déduction la plus rentable.
-                      Répartissez le plafond non utilisé entre les deux déclarants pour maximiser la déduction et garder une imposition équilibrée dans le foyer.
-                      Calibrez vos versements pour annuler l’impôt ; au-delà, placez le surplus sur une assurance-vie plus souple.
-                      Si votre TMI chute sous 11 % après usage du plafond, basculez le surplus d’épargne vers une assurance-vie pour conserver un cadre fiscal avantageux.
-                      Impôt déjà à zéro ? Orientez les nouveaux versements vers un support libre pour rester liquide et diversifié.
+  Pour info, le TMI du foyer fiscal est de {$tmi}%.
+  Règles de génération :
+  **Pas de : ou de ; dans les textes.**
+  Pour astuce_declarantX :
+  Une phrase (≤ 350 caractères).
+  Action concrète pour optimiser un PER : ajuster les versements, prioriser les plafonds non utilisés, ajuster le rythme, etc.
+  Doit être différente du conseil_personnalise_declarantX.
+  Doit être différente entre déclarant 1 et déclarant 2.
+  Pour conseil_personnalise_declarantX :
+  Une phrase (≤ 350 caractères).
+  Ton simple, confiant, rassurant.
+  Si {$tmi} ≤ 11 (TMI ≤ 0,11) et impôt quasi nul, alors :Ne proposer pas de PER. proposer une alternative au PER (par exemple assurance-vie, produit plus souple) en expliquant brièvement pourquoi le PER n’est pas optimal.
+  Sinon : se concentrer sur le PER (priorisation du plafond, ajustement du rythme, usage des plafonds non utilisés, optimisation fiscale).
+  Doit être différente de l’astuce correspondante et personnalisée pour chaque déclarant.
+  Exemples d’astuce :
+  Mettez en place un versement automatique de XXX € par mois pour lisser le risque de marché tout en utilisant votre plafond courant.
+  Programmez vos virements juste après la paie, vous épargnez avant de dépenser et sécurisez votre rythme.
+  Augmentez automatiquement l'épargne mensuelle de 3 % chaque année pour suivre l’inflation sans y penser.
+  Scindez vos virements en deux dates (début et milieu de mois) pour lisser l’effet de marché.
+  Versez votre prime annuelle en janvier, vous profitez toute l’année des intérêts composés.
+  Coupez le versement unique : 60 % maintenant, 40 % en fin d’année pour garder de la trésorerie.
+  Exemples de conseil :
+  Utilisez XX € de prime unique cette année pour absorber votre plafond non utilisé et annuler la quasi-totalité de votre impôt.
+  Priorisez d’abord les 17 000 € de plafond non utilisé, c’est la déduction la plus rentable.
+  Répartissez le plafond non utilisé entre les deux déclarants pour maximiser la déduction et équilibrer la fiscalité du foyer.
+  Calibrez vos versements pour annuler l’impôt, au-delà, placez le surplus sur une assurance-vie.
+  Si votre TMI chute sous 11 % après usage du plafond, basculez le surplus d’épargne vers une assurance-vie.
+  Impôt déjà à zéro ? Orientez vos versements vers un support libre pour rester liquide et diversifié.
       {
         \"astuce_declarant1\": \"string\",
         \"astuce_declarant2\": \"string\",
