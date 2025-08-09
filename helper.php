@@ -33,6 +33,8 @@ function extraireInfosFiscalesImages(string $text): array {
     $plafond_non_utilise_declarant2 = 0;
     $plafond_calcule_declarant1 = '';
     $plafond_calcule_declarant2 = '';
+    $plafonds_non_utilise_declarant1 = [];
+    $plafonds_non_utilise_declarant2 = [];
 
     // Extraire le TMI
     if (preg_match('/Taux marginal.*?(\d{1,2}),\d{2}/', $text, $match)) {
@@ -41,12 +43,20 @@ function extraireInfosFiscalesImages(string $text): array {
 
     // Plafond non utilisé pour les revenus de ...
     preg_match_all('/Plafond non utilisé pour les revenus de \d{4}[^0-9]*(\d{4,5})(?:[^0-9]+(\d{4,5}))?/', $text, $matches, PREG_SET_ORDER);
+    $N1 = 4;
+    $N2 = 4;
     foreach ($matches as $match) {
         if (isset($match[1])) {
+            $key = "N-$N1";
+            $plafonds_non_utilise_declarant1[$key] = (int) $match[1];
             $plafond_non_utilise_declarant1 += (int) $match[1];
+            $N1--;
         }
         if (isset($match[2])) {
+            $key = "N-$N2";
             $plafond_non_utilise_declarant2 += (int) $match[2];
+            $plafonds_non_utilise_declarant2[$key] = (int) $match[1];
+            $N2--;
         }
     }
 
@@ -55,15 +65,17 @@ function extraireInfosFiscalesImages(string $text): array {
         $plafond_calcule_declarant1 = $match[1];
         $plafond_calcule_declarant2 = $match[2] ?? '';
     }
-
     return [
         'tmi' => ($tmi/100) ?? 0,
-        'plafond_non_utilise_declarant1'    => strval($plafond_non_utilise_declarant1),
-        'plafond_non_utilise_declarant2'     => $plafond_non_utilise_declarant2 > 0 ? strval($plafond_non_utilise_declarant2) : '',
+        'plafonds_non_utilise_declarant1'     => $plafonds_non_utilise_declarant1,
+        'plafonds_non_utilise_declarant2'     => $plafonds_non_utilise_declarant2,
+        'plafond_non_utilise_declarant1'      => strval($plafond_non_utilise_declarant1),
+        'plafond_non_utilise_declarant2'      => $plafond_non_utilise_declarant2 > 0 ? strval($plafond_non_utilise_declarant2) : '',
         'plafond_revenus_declarant1' => $plafond_calcule_declarant1,
         'plafond_revenus_declarant2' => $plafond_calcule_declarant2
     ];
 }
+
 function calculEconomiesImpotsPluriannuelles(
     $tmi,
     $montantAnnuelDeclarant1,
@@ -172,7 +184,6 @@ function calculEconomiesImpotsPluriannuelles(
         ],
     ];
 }
-
 
 function pdfToImages(string $pdfPath): array {
     $uploadDir = wp_upload_dir();
@@ -373,71 +384,145 @@ function query_chatgpt_text($prompt) {
     return $responseChatGpt;
 }
 
-function extraireInfosFiscalesPdf($texte) {
+function extraireInfosFiscalesPdf(string $texte): array
+{
     $res = [
-        'annee_N' => null,
-        'plafond_non_utilise_declarant1' => null,
-        'plafond_non_utilise_declarant2' => null,
-        'plafond_revenus_declarant1' => null,
-        'plafond_revenus_declarant2' => null
+        'annee_N'                          => null,
+        'plafond_non_utilise_declarant1'   => null,
+        'plafond_non_utilise_declarant2'   => null,
+        'plafond_revenus_declarant1'       => null,
+        'plafond_revenus_declarant2'       => null,
+        'plafonds_non_utilise_declarant1'  => null, // ['N-4'=>..., 'N-3'=>..., 'N-2'=>...]
+        'plafonds_non_utilise_declarant2'  => null,
     ];
 
-    // Nettoyage du texte
-    $texte = str_replace('Déclar.', "\nDéclar.", $texte);
-    $lines = preg_split('/\r\n|\r|\n/', $texte);
+    // --- Helpers ---
+    $toInt = static function(string $s): int {
+        // Garde uniquement chiffres, espaces, points, virgules
+        $s = preg_replace('/[^0-9\ \.,]/u', '', $s);
+        // Supprime séparateurs
+        $s = str_replace([' ', ',', '.'], '', $s);
+        if ($s === '') return 0;
+        // Garde-fou anti overflow si jamais la capture "avale" trop
+        if (strlen($s) > 12) $s = substr($s, 0, 12);
+        return (int)$s;
+    };
 
-    // Récupérer l'année N
+    // Normalise pour forcer un saut de ligne avant "Déclar."
+    $texte = str_replace('Déclar.', "\nDéclar.", $texte);
+    $lines = preg_split('/\r\n|\r|\n/u', $texte);
+
+    // --- Année N (cotisations versées en YYYY) ---
     foreach ($lines as $line) {
-        if (preg_match('/cotisations versées en (\d{4})/i', $line, $m)) {
+        if (preg_match('/cotisations\s+versées\s+en\s+(\d{4})/iu', $line, $m)) {
             $res['annee_N'] = (int)$m[1];
             break;
         }
     }
 
-    // Découper les blocs par déclarant
+    // --- Découpage blocs Déclarant 1 / Déclarant 2 ---
     $d1bloc = [];
     $d2bloc = [];
     $current = null;
+
     foreach ($lines as $line) {
-        if (preg_match('/Déclar\.\s*1\b/', $line)) { $current = 1; continue; }
-        if (preg_match('/Déclar\.\s*2\b/', $line)) { $current = 2; continue; }
+        if (preg_match('/Déclar\.\s*1\b/u', $line)) { $current = 1; continue; }
+        if (preg_match('/Déclar\.\s*2\b/u', $line)) { $current = 2; continue; }
+
         if ($current === 1) {
-            if (preg_match('/Enfant|Déclar\./', $line)) $current = null;
-            else $d1bloc[] = $line;
+            if (preg_match('/\bEnfant\b|Déclar\./u', $line)) { $current = null; }
+            else { $d1bloc[] = $line; }
         } elseif ($current === 2) {
-            if (preg_match('/Enfant|Déclar\./', $line)) $current = null;
-            else $d2bloc[] = $line;
+            if (preg_match('/\bEnfant\b|Déclar\./u', $line)) { $current = null; }
+            else { $d2bloc[] = $line; }
         }
     }
 
-    // Extraction des plafonds
+    // --- Extraction par déclarant ---
     foreach ([1, 2] as $who) {
+        /** @var string[] $bloc */
         $bloc = ${"d{$who}bloc"};
-        $blocstr = implode(' ', $bloc);
+        $blocstr = implode(' ', array_map('trim', $bloc));
 
-        // Plafond non utilisé (total =)
-        if (preg_match('/=\s*(\d{4,5})/', $blocstr, $m)) {
-            $res["plafond_non_utilise_declarant$who"] = (int)$m[1];
+        // 1) Plafond NON UTILISÉ total (ligne contenant "=") — LIGNE PAR LIGNE
+        $plafondTotal = null;
+        foreach ($bloc as $l) {
+            $l = trim($l);
+            // Exemple: "... + 4 399 + 4 637 = 12 627"
+            if (preg_match('/=\s*([0-9][0-9\ \.,]{0,20})$/u', $l, $m)) {
+                $plafondTotal = $toInt($m[1]);
+                break;
+            }
+        }
+        if ($plafondTotal !== null) {
+            $res["plafond_non_utilise_declarant{$who}"] = $plafondTotal;
         }
 
-        // Plafond actuel (calculé sur revenus de N)
-        if (preg_match('/Plafond calculé sur les revenus de \d{4}\s*(\d{4,5})/', $blocstr, $m)) {
-            $res["plafond_revenus_declarant$who"] = (int)$m[1];
+        // 2) Plafond ACTUEL (calculé sur les revenus de YYYY) — on cherche d'abord ligne par ligne
+        $plafondActuel = null;
+        foreach ($bloc as $l) {
+            if (preg_match('/Plafond\s+calculé\s+sur\s+les\s+revenus\s+de\s+\d{4}\s+([0-9\ \.,]{1,20})/iu', $l, $m)) {
+                $plafondActuel = $toInt($m[1]);
+                break;
+            }
+        }
+        // Fallback : dernier "+ xxx" du bloc
+        if ($plafondActuel === null) {
+            if (preg_match_all('/\+\s*([0-9\ \.,]{1,20})/u', $blocstr, $plus) && !empty($plus[1])) {
+                $plafondActuel = $toInt(end($plus[1]));
+            }
+        }
+        if ($plafondActuel !== null) {
+            $res["plafond_revenus_declarant{$who}"] = $plafondActuel;
         }
 
-        // Fallback si pas trouvé : on prend le dernier "+" (souvent le plafond actuel)
-        if (!$res["plafond_revenus_declarant$who"]) {
-            if (preg_match_all('/\+\s*(\d{4,5})/', $blocstr, $plus) && !empty($plus[1])) {
-                $res["plafond_revenus_declarant$who"] = (int)end($plus[1]);
+        // 3) Détail des 3 années "non utilisé" (N-4, N-3, N-2)
+        $nuBuckets = ['N-4'=>0, 'N-3'=>0, 'N-2'=>0];
+
+        // Cas A : l’avis liste explicitement "2023 : 4 399"…
+        $anneesMontants = [];
+        if (preg_match_all('/(20\d{2})\s*[:\-]?\s*([0-9\ \.,]{3,})/u', $blocstr, $ym, PREG_SET_ORDER)) {
+            foreach ($ym as $mm) {
+                $y = (int)$mm[1];
+                $v = $toInt($mm[2]);
+                if ($v > 0) $anneesMontants[$y] = $v;
+            }
+        }
+        if (count($anneesMontants) >= 3) {
+            ksort($anneesMontants);                         // plus ancien → plus récent
+            $last3 = array_slice($anneesMontants, -3, 3, true);
+            $vals  = array_values($last3);
+            $nuBuckets['N-4'] = (int)$vals[0];
+            $nuBuckets['N-3'] = (int)$vals[1];
+            $nuBuckets['N-2'] = (int)$vals[2];
+        } else {
+            // Cas B : format "+ xxxx + yyyy + zzzz = total"
+            if (preg_match_all('/\+\s*([0-9\ \.,]{3,})/u', $blocstr, $mPlus)) {
+                $vals = array_map($toInt, $mPlus[1]);
+                if (count($vals) >= 3) {
+                    // On prend les 3 derniers +... (supposés être les 3 années reportables)
+                    $last3 = array_slice($vals, -3, 3);
+                    $nuBuckets['N-4'] = (int)$last3[0];
+                    $nuBuckets['N-3'] = (int)$last3[1];
+                    $nuBuckets['N-2'] = (int)$last3[2];
+                }
             }
         }
 
-        // Soustraction : on calcule la différence si les deux sont présents
-        if ($res["plafond_non_utilise_declarant$who"] !== null && $res["plafond_revenus_declarant$who"] !== null) {
-            $res["plafond_non_utilise_declarant$who"] -= $res["plafond_revenus_declarant$who"];
+        $res["plafonds_non_utilise_declarant{$who}"] = $nuBuckets;
+
+        // 4) Ajustement : si on a le total (=) ET le plafond actuel, certains avis affichent
+        //    "N-4 + N-3 + N-2 + (plafond actuel) = total".
+        //    Pour conserver la compatibilité avec ton ancien code, on soustrait le plafond actuel du total.
+        if ($res["plafond_non_utilise_declarant{$who}"] !== null
+            && $res["plafond_revenus_declarant{$who}"] !== null) {
+            $res["plafond_non_utilise_declarant{$who}"] -= $res["plafond_revenus_declarant{$who}"];
+            // Sécurité : pas de négatif
+            if ($res["plafond_non_utilise_declarant{$who}"] < 0) {
+                $res["plafond_non_utilise_declarant{$who}"] = 0;
+            }
         }
     }
-
     return $res;
 }
 
@@ -694,6 +779,16 @@ function calcul_plafonds_structures($anneeCotisation, $PASS, $salaireDefault, $r
     }
 
     ksort($plafonds);
+    // Transformation en N-4, N-3, N-2
+    $annees   = array_keys($plafonds);
+    $valeurs  = array_values($plafonds);
+
+    // Les 3 premières années correspondent au N-4, N-3, N-2
+    $plafonds_non_utilise = [
+        "N-4" => round($valeurs[0], 0),
+        "N-3" => round($valeurs[1], 0),
+        "N-2" => round($valeurs[2], 0),
+    ];
 
     // Les 3 premières années = plafonds non utilisés → somme
     $plafond_non_utilise = array_sum(array_slice($plafonds, 0, 3, true));
@@ -702,8 +797,9 @@ function calcul_plafonds_structures($anneeCotisation, $PASS, $salaireDefault, $r
     $plafond_revenus = end($plafonds);
 
     return [
-        "plafond_non_utilise_{$declarant}" => round($plafond_non_utilise, 0),
-        "plafond_revenus_{$declarant}"     => round($plafond_revenus,0)
+        "plafond_non_utilise_{$declarant}"        => $plafond_non_utilise,
+        "plafond_revenus_{$declarant}"            => $plafond_revenus,
+        "plafonds_non_utilise_{$declarant}"       => $plafonds_non_utilise
     ];
 }
 
@@ -745,4 +841,192 @@ function charger_tranches_tmi(array $section): array {
         $tranches[] = ['max' => $max, 'taux' => $taux];
     }
     return $tranches;
+}
+
+function traiter_millesime_reliquat(string $k, float &$besoin1, float &$besoin2, array &$nu1, array &$nu2): array {
+    $res = [
+        'd1' => ['propre' => 0.0, 'transfert_recu' => 0.0, 'transfert_donne' => 0.0],
+        'd2' => ['propre' => 0.0, 'transfert_recu' => 0.0, 'transfert_donne' => 0.0],
+    ];
+
+    // Conso propre
+    $propre1 = min($besoin1, (float)($nu1[$k] ?? 0.0));
+    $nu1[$k] -= $propre1;  $besoin1 -= $propre1;  $res['d1']['propre'] = $propre1;
+
+    $propre2 = min($besoin2, (float)($nu2[$k] ?? 0.0));
+    $nu2[$k] -= $propre2;  $besoin2 -= $propre2;  $res['d2']['propre'] = $propre2;
+
+    // Transfert intra-millésime
+    if ($besoin1 > 0 && ($nu2[$k] ?? 0) > 0) {
+        $prendre = min($besoin1, $nu2[$k]);
+        $nu2[$k] -= $prendre;  $besoin1 -= $prendre;
+        $res['d1']['transfert_recu'] += $prendre;
+        $res['d2']['transfert_donne'] += $prendre;
+    }
+    if ($besoin2 > 0 && ($nu1[$k] ?? 0) > 0) {
+        $prendre = min($besoin2, $nu1[$k]);
+        $nu1[$k] -= $prendre;  $besoin2 -= $prendre;
+        $res['d2']['transfert_recu'] += $prendre;
+        $res['d1']['transfert_donne'] += $prendre;
+    }
+
+    return $res;
+}
+
+function traiter_millesime_actuel(float &$besoin1, float &$besoin2, float &$pa1, float &$pa2): array {
+    $res = [
+        'd1' => ['propre' => 0.0, 'transfert_recu' => 0.0, 'transfert_donne' => 0.0],
+        'd2' => ['propre' => 0.0, 'transfert_recu' => 0.0, 'transfert_donne' => 0.0],
+    ];
+
+    // Conso propre
+    $propre1 = min($besoin1, $pa1);  $pa1 -= $propre1;  $besoin1 -= $propre1;  $res['d1']['propre'] = $propre1;
+    $propre2 = min($besoin2, $pa2);  $pa2 -= $propre2;  $besoin2 -= $propre2;  $res['d2']['propre'] = $propre2;
+
+    // Transferts
+    if ($besoin1 > 0 && $pa2 > 0) {
+        $prendre = min($besoin1, $pa2);
+        $pa2 -= $prendre; $besoin1 -= $prendre;
+        $res['d1']['transfert_recu'] += $prendre;
+        $res['d2']['transfert_donne'] += $prendre;
+    }
+    if ($besoin2 > 0 && $pa1 > 0) {
+        $prendre = min($besoin2, $pa1);
+        $pa1 -= $prendre; $besoin2 -= $prendre;
+        $res['d2']['transfert_recu'] += $prendre;
+        $res['d1']['transfert_donne'] += $prendre;
+    }
+
+    return $res;
+}
+
+function calcul_exact_par_millesime(
+    float $tmi,
+    float $versementAnnuel1,
+    float $versementAnnuel2,
+    float $plafondActuel1,
+    float $plafondActuel2,
+    array  $nonUtilise1,
+    array  $nonUtilise2,
+    int    $anneeCotisation
+) {
+
+    $nu1 = [
+        'N-4' => (float)($nonUtilise1['N-4'] ?? 0.0),
+        'N-3' => (float)($nonUtilise1['N-3'] ?? 0.0),
+        'N-2' => (float)($nonUtilise1['N-2'] ?? 0.0),
+    ];
+    $nu2 = [
+        'N-4' => (float)($nonUtilise2['N-4'] ?? 0.0),
+        'N-3' => (float)($nonUtilise2['N-3'] ?? 0.0),
+        'N-2' => (float)($nonUtilise2['N-2'] ?? 0.0),
+    ];
+    /*var_dump('nu1');
+    var_dump($nu1);
+    var_dump('nu2');
+    var_dump($nu2);
+    var_dump('plafondActuel1');
+    var_dump($plafondActuel1);
+    var_dump('plafondActuel2');
+    var_dump($plafondActuel2);
+    var_dump('versementAnnuel1');
+    var_dump($versementAnnuel1);
+    var_dump('versementAnnuel2');
+    var_dump($versementAnnuel2);
+    var_dump($anneeCotisation);*/
+    $pa1 = (float)$plafondActuel1;
+    $pa2 = (float)$plafondActuel2;
+
+    $besoin1 = max(0.0, $versementAnnuel1);
+    $besoin2 = max(0.0, $versementAnnuel2);
+
+    $eco1 = 0.0; $eco2 = 0.0;
+    $details = ['N-4'=>[],'N-3'=>[],'N-2'=>[],'N-1'=>[]];
+
+    // N-4 à N-2
+    foreach (['N-4','N-3','N-2'] as $k) {
+        $r = traiter_millesime_reliquat($k, $besoin1, $besoin2, $nu1, $nu2);
+        $details[$k] = $r;
+        $eco1 += ($r['d1']['propre'] + $r['d1']['transfert_recu']) * $tmi;
+        $eco2 += ($r['d2']['propre'] + $r['d2']['transfert_recu']) * $tmi;
+    }
+
+    // N-1
+    $r = traiter_millesime_actuel($besoin1, $besoin2, $pa1, $pa2);
+    $details['N-1'] = $r;
+    $eco1 += ($r['d1']['propre'] + $r['d1']['transfert_recu']) * $tmi;
+    $eco2 += ($r['d2']['propre'] + $r['d2']['transfert_recu']) * $tmi;
+
+    // Préparer rollover pour affichage futur
+    $prochaine_annee1 = [
+        'N-4' => $nu1['N-3'],
+        'N-3' => $nu1['N-2'],
+        'N-2' => max(0.0, $pa1),
+    ];
+    $prochaine_annee2 = [
+        'N-4' => $nu2['N-3'],
+        'N-3' => $nu2['N-2'],
+        'N-2' => max(0.0, $pa2),
+    ];
+
+    $mapAnnees = function(array $bucket) use ($anneeCotisation) {
+        return [
+            $anneeCotisation - 4 => round($bucket['N-4'] ?? 0.0, 2),
+            $anneeCotisation - 3 => round($bucket['N-3'] ?? 0.0, 2),
+            $anneeCotisation - 2 => round($bucket['N-2'] ?? 0.0, 2),
+        ];
+    };
+
+    return [
+        'declarant1' => [
+            'economie_totale' => round($eco1, 2),
+            'details' => $details,
+            'plafond_actuel_restant' => round(max(0.0, $pa1), 2),
+            'plafond_non_utilise_restant' => [
+                'N-4' => round($nu1['N-4'], 2),
+                'N-3' => round($nu1['N-3'], 2),
+                'N-2' => round($nu1['N-2'], 2),
+            ],
+            'plafond_non_utilise_restant_par_annee' => $mapAnnees($nu1),
+            'transfert_total_recu' => round(
+                ($details['N-4']['d1']['transfert_recu'] ?? 0)
+              + ($details['N-3']['d1']['transfert_recu'] ?? 0)
+              + ($details['N-2']['d1']['transfert_recu'] ?? 0)
+              + ($details['N-1']['d1']['transfert_recu'] ?? 0), 2
+            ),
+            'plafond_non_utilise_prochaine_annee' => [
+                'details' => [
+                    'N-4' => round($prochaine_annee1['N-4'], 2),
+                    'N-3' => round($prochaine_annee1['N-3'], 2),
+                    'N-2' => round($prochaine_annee1['N-2'], 2),
+                ],
+                'par_annee' => $mapAnnees($prochaine_annee1),
+            ],
+        ],
+        'declarant2' => [
+            'economie_totale' => round($eco2, 2),
+            'details' => $details,
+            'plafond_actuel_restant' => round(max(0.0, $pa2), 2),
+            'plafond_non_utilise_restant' => [
+                'N-4' => round($nu2['N-4'], 2),
+                'N-3' => round($nu2['N-3'], 2),
+                'N-2' => round($nu2['N-2'], 2),
+            ],
+            'plafond_non_utilise_restant_par_annee' => $mapAnnees($nu2),
+            'transfert_total_recu' => round(
+                ($details['N-4']['d2']['transfert_recu'] ?? 0)
+              + ($details['N-3']['d2']['transfert_recu'] ?? 0)
+              + ($details['N-2']['d2']['transfert_recu'] ?? 0)
+              + ($details['N-1']['d2']['transfert_recu'] ?? 0), 2
+            ),
+            'plafond_non_utilise_prochaine_annee' => [
+                'details' => [
+                    'N-4' => round($prochaine_annee2['N-4'], 2),
+                    'N-3' => round($prochaine_annee2['N-3'], 2),
+                    'N-2' => round($prochaine_annee2['N-2'], 2),
+                ],
+                'par_annee' => $mapAnnees($prochaine_annee2),
+            ],
+        ],
+    ];
 }

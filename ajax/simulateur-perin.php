@@ -102,7 +102,7 @@ function handle_simulation_perin_avec_avis() {
                 'non_utilise' => $plafond_non_utilise1,
                 'actuel'       => $plafond_revenus_declarant1,
                 'transfere_recu'=> $economiesImpotsPluriannuelles['declarant1']['plafond_transfere'] ?? 0.0, // reçu depuis D1
-                'restant'       => $economiesImpotsPluriannuelles['declarant1']['plafond_restant']   ?? 0.0, // après transferts              
+                'restant'       => $economiesImpotsPluriannuelles['declarant1']['plafond_restant']   ?? 0.0, // après transferts
             ],
             'economie' => [
                 'totale'    => $economiesImpotsPluriannuelles['declarant1']['economie_totale'] ?? 0.0,
@@ -168,7 +168,6 @@ function handle_simulation_perin_sans_avis() {
     if($nb_personne == 2){
         $plafondsDeclarant2 = calcul_plafonds_structures($anneeCotisation, $PASS, $salaire2, $revenu_activite2, 'declarant2');
     }
-
     // Contexte pour la fonction
     $contexte = [
         'nb_personne'  => $nb_personne,
@@ -183,9 +182,29 @@ function handle_simulation_perin_sans_avis() {
     if(!$connait_tmi){
         $tmi = calculer_tmi($contexte, $TRANCHES_TMI);
     }
+
     $montantAnnuelDeclarant1  = (floatval($versement) > 0) ? floatval($versement) * 12 : 0;
     $montantAnnuelDeclarant2  = (floatval($versement2) > 0) ? floatval($versement2) * 12 : 0;
 
+    $plafondActuel1 = 0;
+    if(isset($plafondsDeclarant1["plafond_revenus_declarant1"])){
+      $plafondActuel1 = $plafondsDeclarant1["plafond_revenus_declarant1"];
+    }
+    $plafondActuel2 = 0;
+    if(isset($plafondsDeclarant2["plafond_revenus_declarant2"])){
+      $plafondActuel2 = $plafondsDeclarant2["plafond_revenus_declarant2"];
+    }
+    $nonUtilise1 = [];
+    if(isset($plafondsDeclarant1["plafonds_non_utilise_declarant1"])){
+      $nonUtilise1 = $plafondsDeclarant1["plafonds_non_utilise_declarant1"];
+    }
+    $nonUtilise2 = [];
+    if(isset($plafondsDeclarant2["plafonds_non_utilise_declarant2"])){
+      $nonUtilise2 = $plafondsDeclarant2["plafonds_non_utilise_declarant2"];
+    }
+    $anneeCotisation = date('Y');
+    $resultPlafonds = calcul_exact_par_millesime($tmi,$montantAnnuelDeclarant1,$montantAnnuelDeclarant2,$plafondActuel1,$plafondActuel2,$nonUtilise1,$nonUtilise2,$anneeCotisation);
+    var_dump($resultPlafonds);
     $plafond_non_utilise1                     = $plafondsDeclarant1["plafond_non_utilise_declarant1"];
     $plafond_non_utilise2                     = $plafondsDeclarant2["plafond_non_utilise_declarant2"];
     $plafond_revenus_declarant1               = $plafondsDeclarant1["plafond_revenus_declarant1"];
