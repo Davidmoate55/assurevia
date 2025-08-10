@@ -125,14 +125,14 @@ function calculEconomiesImpotsPluriannuelles(
         $reste_plafond_1 = max(0.0, $plafond_total_1 - $deductible1);
         $economie_declarant1 += $deductible1 * $tmi;
     }
-
+    $economie_declarant1_annee1 = $economie_declarant1;
     if ($nb_annees2 > 0) {
         $plafond_total_2 = $plafond_revenus_declarant2 + $plafond_non_utilise2;
         $deductible2     = min($montantAnnuelDeclarant2, $plafond_total_2);
         $reste_plafond_2 = max(0.0, $plafond_total_2 - $deductible2);
         $economie_declarant2 += $deductible2 * $tmi;
     }
-
+    $economie_declarant2_annee1 = $economie_declarant2;
     // ---- Redistribution de plafond (1ère année uniquement) si 2 déclarants valides ----
     if ($nb_annees1 > 0 && $nb_annees2 > 0 && $montantAnnuelDeclarant1 > 0 && $montantAnnuelDeclarant2 > 0) {
         // D1 -> D2
@@ -175,12 +175,14 @@ function calculEconomiesImpotsPluriannuelles(
             'nb_annees'         => $nb_annees1,
             'plafond_transfere' => round($plafond_transfere_vers_1, 2), // pris chez D2
             'plafond_restant'   => round(max(0.0, $reste_plafond_1), 2), // reste à D1 après transferts
+            'economie_annee1' => round($economie_declarant1_annee1, 2),
         ],
         'declarant2' => [
             'economie_totale'   => round($economie_declarant2, 2),
             'nb_annees'         => $nb_annees2,
             'plafond_transfere' => round($plafond_transfere_vers_2, 2), // pris chez D1
             'plafond_restant'   => round(max(0.0, $reste_plafond_2), 2), // reste à D2 après transferts
+            'economie_annee1' => round($economie_declarant2_annee1, 2),
         ],
     ];
 }
@@ -910,7 +912,7 @@ function calcul_exact_par_millesime(
     array  $nonUtilise2,
     int    $anneeCotisation
 ) {
-
+    // --- INIT identique ---
     $nu1 = [
         'N-4' => (float)($nonUtilise1['N-4'] ?? 0.0),
         'N-3' => (float)($nonUtilise1['N-3'] ?? 0.0),
@@ -921,19 +923,6 @@ function calcul_exact_par_millesime(
         'N-3' => (float)($nonUtilise2['N-3'] ?? 0.0),
         'N-2' => (float)($nonUtilise2['N-2'] ?? 0.0),
     ];
-    /*var_dump('nu1');
-    var_dump($nu1);
-    var_dump('nu2');
-    var_dump($nu2);
-    var_dump('plafondActuel1');
-    var_dump($plafondActuel1);
-    var_dump('plafondActuel2');
-    var_dump($plafondActuel2);
-    var_dump('versementAnnuel1');
-    var_dump($versementAnnuel1);
-    var_dump('versementAnnuel2');
-    var_dump($versementAnnuel2);
-    var_dump($anneeCotisation);*/
     $pa1 = (float)$plafondActuel1;
     $pa2 = (float)$plafondActuel2;
 
@@ -943,7 +932,7 @@ function calcul_exact_par_millesime(
     $eco1 = 0.0; $eco2 = 0.0;
     $details = ['N-4'=>[],'N-3'=>[],'N-2'=>[],'N-1'=>[]];
 
-    // N-4 à N-2
+    // --- N-4 à N-2 identique ---
     foreach (['N-4','N-3','N-2'] as $k) {
         $r = traiter_millesime_reliquat($k, $besoin1, $besoin2, $nu1, $nu2);
         $details[$k] = $r;
@@ -951,13 +940,13 @@ function calcul_exact_par_millesime(
         $eco2 += ($r['d2']['propre'] + $r['d2']['transfert_recu']) * $tmi;
     }
 
-    // N-1
+    // --- N-1 identique ---
     $r = traiter_millesime_actuel($besoin1, $besoin2, $pa1, $pa2);
     $details['N-1'] = $r;
     $eco1 += ($r['d1']['propre'] + $r['d1']['transfert_recu']) * $tmi;
     $eco2 += ($r['d2']['propre'] + $r['d2']['transfert_recu']) * $tmi;
 
-    // Préparer rollover pour affichage futur
+    // --- Rollover identique ---
     $prochaine_annee1 = [
         'N-4' => $nu1['N-3'],
         'N-3' => $nu1['N-2'],
@@ -968,65 +957,138 @@ function calcul_exact_par_millesime(
         'N-3' => $nu2['N-2'],
         'N-2' => max(0.0, $pa2),
     ];
-
     $mapAnnees = function(array $bucket) use ($anneeCotisation) {
         return [
-            $anneeCotisation - 4 => round($bucket['N-4'] ?? 0.0, 2),
-            $anneeCotisation - 3 => round($bucket['N-3'] ?? 0.0, 2),
-            $anneeCotisation - 2 => round($bucket['N-2'] ?? 0.0, 2),
+            $anneeCotisation - 3 => round($bucket['N-4'] ?? 0.0, 2),
+            $anneeCotisation - 2 => round($bucket['N-3'] ?? 0.0, 2),
+            $anneeCotisation - 1 => round($bucket['N-2'] ?? 0.0, 2),
         ];
     };
 
+    // ====== ENRICHISSEMENTS FRONT-FRIENDLY (sans rien casser) ======
+    $sumUsed = function(array $det, string $who, string $k): float {
+        return (float)($det[$k][$who]['propre'] ?? 0.0) + (float)($det[$k][$who]['transfert_recu'] ?? 0.0);
+    };
+    $used1 = [
+        'N-4' => $sumUsed($details,'d1','N-4'),
+        'N-3' => $sumUsed($details,'d1','N-3'),
+        'N-2' => $sumUsed($details,'d1','N-2'),
+        'N-1' => $sumUsed($details,'d1','N-1'),
+    ];
+    $used2 = [
+        'N-4' => $sumUsed($details,'d2','N-4'),
+        'N-3' => $sumUsed($details,'d2','N-3'),
+        'N-2' => $sumUsed($details,'d2','N-2'),
+        'N-1' => $sumUsed($details,'d2','N-1'),
+    ];
+
+    $stateOf = function(float $used, float $rest): string {
+        if ($used > 0.0 && $rest <= 0.0) return 'full';   // entièrement utilisé
+        if ($used > 0.0 && $rest  > 0.0) return 'part';   // partiellement utilisé
+        return 'none';                                    // pas utilisé
+    };
+
+    // totaux transferts
+    $sumKey = function(array $det, string $who, string $key): float {
+        $s = 0.0;
+        foreach (['N-4','N-3','N-2','N-1'] as $k) $s += (float)($det[$k][$who][$key] ?? 0.0);
+        return round($s, 2);
+    };
+    $transf_recu_d1  = $sumKey($details,'d1','transfert_recu');
+    $transf_donne_d1 = $sumKey($details,'d1','transfert_donne');
+    $transf_recu_d2  = $sumKey($details,'d2','transfert_recu');
+    $transf_donne_d2 = $sumKey($details,'d2','transfert_donne');
+
+    // ====== PAYLOAD IDENTIQUE + CHAMPS AJOUTÉS ======
+    $out1 = [
+        // --- Clés historiques (inchangées) ---
+        'economie_totale' => round($eco1, 2),
+        'details' => $details,
+        'plafond_actuel_restant' => round(max(0.0, $pa1), 2),
+        'plafond_non_utilise_restant' => [
+            'N-4' => round($nu1['N-4'], 2),
+            'N-3' => round($nu1['N-3'], 2),
+            'N-2' => round($nu1['N-2'], 2),
+        ],
+        'plafond_non_utilise_restant_par_annee' => $mapAnnees($nu1),
+        'transfert_total_recu' => $transf_recu_d1,
+        'plafond_non_utilise_prochaine_annee' => [
+            'details' => [
+                'N-4' => round($prochaine_annee1['N-4'], 2),
+                'N-3' => round($prochaine_annee1['N-3'], 2),
+                'N-2' => round($prochaine_annee1['N-2'], 2),
+            ],
+            'par_annee' => $mapAnnees($prochaine_annee1),
+        ],
+
+        // --- Nouveaux champs (facilitent le JS/UX) ---
+        'plafond_utilise_par_annee' => [
+            'N-4' => round($used1['N-4'], 2),
+            'N-3' => round($used1['N-3'], 2),
+            'N-2' => round($used1['N-2'], 2),
+            'N-1' => round($used1['N-1'], 2),
+        ],
+        'etat_par_annee' => [
+            'N-4' => $stateOf($used1['N-4'], $nu1['N-4']),
+            'N-3' => $stateOf($used1['N-3'], $nu1['N-3']),
+            'N-2' => $stateOf($used1['N-2'], $nu1['N-2']),
+            'N'   => $stateOf($used1['N-1'], $pa1), // année courante
+        ],
+        'totaux' => [
+            'utilise' => round($used1['N-4'] + $used1['N-3'] + $used1['N-2'] + $used1['N-1'], 2),
+            'restant' => round($nu1['N-4'] + $nu1['N-3'] + $nu1['N-2'] + $pa1, 2),
+        ],
+        'transferts' => [
+            'recu'  => $transf_recu_d1,
+            'donne' => $transf_donne_d1,
+        ],
+    ];
+
+    $out2 = [
+        'economie_totale' => round($eco2, 2),
+        'details' => $details,
+        'plafond_actuel_restant' => round(max(0.0, $pa2), 2),
+        'plafond_non_utilise_restant' => [
+            'N-4' => round($nu2['N-4'], 2),
+            'N-3' => round($nu2['N-3'], 2),
+            'N-2' => round($nu2['N-2'], 2),
+        ],
+        'plafond_non_utilise_restant_par_annee' => $mapAnnees($nu2),
+        'transfert_total_recu' => $transf_recu_d2,
+        'plafond_non_utilise_prochaine_annee' => [
+            'details' => [
+                'N-4' => round($prochaine_annee2['N-4'], 2),
+                'N-3' => round($prochaine_annee2['N-3'], 2),
+                'N-2' => round($prochaine_annee2['N-2'], 2),
+            ],
+            'par_annee' => $mapAnnees($prochaine_annee2),
+        ],
+
+        // Nouveaux champs
+        'plafond_utilise_par_annee' => [
+            'N-4' => round($used2['N-4'], 2),
+            'N-3' => round($used2['N-3'], 2),
+            'N-2' => round($used2['N-2'], 2),
+            'N-1' => round($used2['N-1'], 2),
+        ],
+        'etat_par_annee' => [
+            'N-4' => $stateOf($used2['N-4'], $nu2['N-4']),
+            'N-3' => $stateOf($used2['N-3'], $nu2['N-3']),
+            'N-2' => $stateOf($used2['N-2'], $nu2['N-2']),
+            'N'   => $stateOf($used2['N-1'], $pa2),
+        ],
+        'totaux' => [
+            'utilise' => round($used2['N-4'] + $used2['N-3'] + $used2['N-2'] + $used2['N-1'], 2),
+            'restant' => round($nu2['N-4'] + $nu2['N-3'] + $nu2['N-2'] + $pa2, 2),
+        ],
+        'transferts' => [
+            'recu'  => $transf_recu_d2,
+            'donne' => $transf_donne_d2,
+        ],
+    ];
+
     return [
-        'declarant1' => [
-            'economie_totale' => round($eco1, 2),
-            'details' => $details,
-            'plafond_actuel_restant' => round(max(0.0, $pa1), 2),
-            'plafond_non_utilise_restant' => [
-                'N-4' => round($nu1['N-4'], 2),
-                'N-3' => round($nu1['N-3'], 2),
-                'N-2' => round($nu1['N-2'], 2),
-            ],
-            'plafond_non_utilise_restant_par_annee' => $mapAnnees($nu1),
-            'transfert_total_recu' => round(
-                ($details['N-4']['d1']['transfert_recu'] ?? 0)
-              + ($details['N-3']['d1']['transfert_recu'] ?? 0)
-              + ($details['N-2']['d1']['transfert_recu'] ?? 0)
-              + ($details['N-1']['d1']['transfert_recu'] ?? 0), 2
-            ),
-            'plafond_non_utilise_prochaine_annee' => [
-                'details' => [
-                    'N-4' => round($prochaine_annee1['N-4'], 2),
-                    'N-3' => round($prochaine_annee1['N-3'], 2),
-                    'N-2' => round($prochaine_annee1['N-2'], 2),
-                ],
-                'par_annee' => $mapAnnees($prochaine_annee1),
-            ],
-        ],
-        'declarant2' => [
-            'economie_totale' => round($eco2, 2),
-            'details' => $details,
-            'plafond_actuel_restant' => round(max(0.0, $pa2), 2),
-            'plafond_non_utilise_restant' => [
-                'N-4' => round($nu2['N-4'], 2),
-                'N-3' => round($nu2['N-3'], 2),
-                'N-2' => round($nu2['N-2'], 2),
-            ],
-            'plafond_non_utilise_restant_par_annee' => $mapAnnees($nu2),
-            'transfert_total_recu' => round(
-                ($details['N-4']['d2']['transfert_recu'] ?? 0)
-              + ($details['N-3']['d2']['transfert_recu'] ?? 0)
-              + ($details['N-2']['d2']['transfert_recu'] ?? 0)
-              + ($details['N-1']['d2']['transfert_recu'] ?? 0), 2
-            ),
-            'plafond_non_utilise_prochaine_annee' => [
-                'details' => [
-                    'N-4' => round($prochaine_annee2['N-4'], 2),
-                    'N-3' => round($prochaine_annee2['N-3'], 2),
-                    'N-2' => round($prochaine_annee2['N-2'], 2),
-                ],
-                'par_annee' => $mapAnnees($prochaine_annee2),
-            ],
-        ],
+        'declarant1' => $out1,
+        'declarant2' => $out2,
     ];
 }

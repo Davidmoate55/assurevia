@@ -139,6 +139,10 @@ function handle_simulation_perin_avec_avis() {
 function handle_simulation_perin_sans_avis() {
     // 1) Lecture des champs POST
     $resultat         = [];
+    $salaire2             =  0;
+    $revenu_activite2     =  0;
+    $age2                 =  null;
+    $versement2           =  null;
     $reponse_tmi      = isset($_POST['tmi']) ? $_POST['tmi'] : 'non';
     $connait_tmi      = ($reponse_tmi === 'oui');
     $tmi              = ($connait_tmi && isset($_POST['tmi_valeur'])) ? ((float)$_POST['tmi_valeur'] / 100.0) : null;
@@ -154,10 +158,13 @@ function handle_simulation_perin_sans_avis() {
 
 
     // Déclarant 2 (si couple)
-    $salaire2             = isset($_POST['salaires2'])        ? floatval($_POST['salaires2'])        : 0;
-    $revenu_activite2     = isset($_POST['revenu_activite2']) ? floatval($_POST['revenu_activite2']) : 0;
-    $age2                 = isset($_POST['age_2'])             ? intval($_POST['age_2'])               : null;
-    $versement2           = isset($_POST['versement_2'])       ? floatval($_POST['versement_2'])       : null;
+    if($nb_personne == 2){
+      $salaire2             = isset($_POST['salaires2'])        ? floatval($_POST['salaires2'])        : 0;
+      $revenu_activite2     = isset($_POST['revenu_activite2']) ? floatval($_POST['revenu_activite2']) : 0;
+      $age2                 = isset($_POST['age_2'])             ? intval($_POST['age_2'])               : null;
+      $versement2           = isset($_POST['versement_2'])       ? floatval($_POST['versement_2'])       : null;
+    }
+
 
     $PASS             = array_map('floatval', load_config(__DIR__ . '/../config.ini', 'PASS'));
     $tmi_section      = load_config(__DIR__ . '/../config.ini', 'TMI');
@@ -203,8 +210,6 @@ function handle_simulation_perin_sans_avis() {
       $nonUtilise2 = $plafondsDeclarant2["plafonds_non_utilise_declarant2"];
     }
     $anneeCotisation = date('Y');
-    $resultPlafonds = calcul_exact_par_millesime($tmi,$montantAnnuelDeclarant1,$montantAnnuelDeclarant2,$plafondActuel1,$plafondActuel2,$nonUtilise1,$nonUtilise2,$anneeCotisation);
-    var_dump($resultPlafonds);
     $plafond_non_utilise1                     = $plafondsDeclarant1["plafond_non_utilise_declarant1"];
     $plafond_non_utilise2                     = $plafondsDeclarant2["plafond_non_utilise_declarant2"];
     $plafond_revenus_declarant1               = $plafondsDeclarant1["plafond_revenus_declarant1"];
@@ -214,6 +219,7 @@ function handle_simulation_perin_sans_avis() {
     $interetComposeDeclarant1       = calculInteretsComposes($versement, $taux_profil, $age, 64);
     $interetComposeDeclarant2       = calculInteretsComposes($versement2, $taux_profil, $age2, 64);
     $data = [];
+    $resultPlafonds = calcul_exact_par_millesime($tmi,$montantAnnuelDeclarant1,$montantAnnuelDeclarant2,$plafondActuel1,$plafondActuel2,$nonUtilise1,$nonUtilise2,$anneeCotisation);
     $data['declarant1'] = $interetComposeDeclarant1;
     $data['declarant2'] = $interetComposeDeclarant2;
     $data['plafonds']["plafond_non_utilise_declarant1"]   = $plafond_non_utilise1;
@@ -224,6 +230,7 @@ function handle_simulation_perin_sans_avis() {
     $prompt = getPromptSansAvis($age, $age2, $data, $versement, $versement2);
     $responseChatGpt = query_chatgpt_text($prompt);
     $resultatSimulateur = [
+        'plafondsDetails'         => $resultPlafonds,
         'message'                 => "Les résultats fournis par ce simulateur sont des estimations à titre indicatif. Pour une évaluation précise et complète de vos économies d'impôts, veuillez vous référer à votre dernier avis d'impôt. Investir comporte des risques de perte en capital.",
         'tmi'                     => $tmi,
         'declarant1' => [
@@ -234,6 +241,7 @@ function handle_simulation_perin_sans_avis() {
             'versements_cumules'  => $interetComposeDeclarant1['versements_cumules'] ?? 0.0,
             'capital_final'       => $interetComposeDeclarant1['capital_final'] ?? 0.0,
             'plus_value'          => $interetComposeDeclarant1['plus_value'] ?? 0.0,
+            'economie_annee1'     => $economiesImpotsPluriannuelles['declarant1']['economie_annee1'] ?? 0.0,
             'plafonds' => [
                 'non_utilise' => $plafond_non_utilise1,
                 'actuel'       => $plafond_revenus_declarant1,
@@ -255,6 +263,7 @@ function handle_simulation_perin_sans_avis() {
             'versements_cumules' => $interetComposeDeclarant2['versements_cumules'] ?? 0.0,
             'capital_final'      => $interetComposeDeclarant2['capital_final'] ?? 0.0,
             'plus_value'         => $interetComposeDeclarant2['plus_value'] ?? 0.0,
+            'economie_annee1'     => $economiesImpotsPluriannuelles['declarant2']['economie_annee1'] ?? 0.0,
             'plafonds' => [
                 'non_utilise' => $plafond_non_utilise2,
                 'actuel'       => $plafond_revenus_declarant2,

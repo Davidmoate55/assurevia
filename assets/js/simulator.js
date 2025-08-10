@@ -276,6 +276,7 @@
             const d1 = response.data.declarant1;
             const d2 = response.data.declarant2;
             const tmi = response.data.tmi;
+            const message             = response.data.message;
             const is_avis_imposition = response.data.is_avis_imposition;
             const dernier_avis_imposition = response.data.dernier_avis_imposition;
 
@@ -287,8 +288,8 @@
             }else{
               showPERPopupAfterResult();
               let html = '';
-              if (d1 && d1.versements_mensuel && d1.prenom) html += createDeclarantCard('Déclarant 1', d1, tmi);
-              if (d2 && d2.versements_mensuel && d2.prenom) html += createDeclarantCard('Déclarant 2', d2, tmi);
+              if (d1 && d1.versements_mensuel && d1.prenom) html += createDeclarantCard('Déclarant 1', d1, tmi, message);
+              if (d2 && d2.versements_mensuel && d2.prenom) html += createDeclarantCard('Déclarant 2', d2, tmi, message);
               $('#per-simu-cards').html(html);
 
               // Scroll automatique sur la div résultat
@@ -454,14 +455,15 @@
         dataType: 'json',
         success(response){
           if (response.success) {
-            const d1      = response.data.declarant1;
-            const d2      = response.data.declarant2;
-            const message = response.data.message;
-            const tmi     = response.data.tmi;
+            const d1                  = response.data.declarant1;
+            const d2                  = response.data.declarant2;
+            const message             = response.data.message;
+            const tmi                 = response.data.tmi;
+            const plafondsDetails     = response.data.plafondsDetails;
             showPERPopupAfterResult();
             let html = '';
-            if (d1 && d1.versements_mensuel && d1.prenom) html += createDeclarantCard('Déclarant 1', d1, tmi, message);
-            if (d2 && d2.versements_mensuel && d2.prenom) html += createDeclarantCard('Déclarant 2', d2, tmi, message);
+            if (d1 && d1.versements_mensuel && d1.prenom) html += createDeclarantCard('Déclarant 1', d1, tmi, message, plafondsDetails.declarant1);
+            if (d2 && d2.versements_mensuel && d2.prenom) html += createDeclarantCard('Déclarant 2', d2, tmi, message, plafondsDetails.declarant2);
             $('#per-simu-cards').html(html);
             // Scroll automatique sur la div résultat
             $('html, body').animate({
@@ -658,7 +660,93 @@
       $('#popup-simulateur-per').fadeIn();
     }, 50000); // 8 secondes
   }
-  function createDeclarantCard(label, d, tmi, message) {
+  function createDeclarantCard(label, d, tmi, message, plafondsDetails) {
+    // Récup des détails du bon déclarant
+    const key = /2/.test(label) ? 'declarant2' : 'declarant1';
+    const pd  = plafondsDetails;
+
+    // Helpers sûrs
+    const euro = (n) => (typeof n === 'number' ? n : 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' €';
+    const sum  = (obj) => Object.values(obj || {}).reduce((a,b)=>a+(+b||0),0);
+
+    // suppose euro(n) et sum(obj) existent déjà
+
+    const chipsReportable = (() => {
+      const mapObj  = pd?.plafond_non_utilise_restant_par_annee || {};
+      const entries = Object.entries(mapObj);
+
+      // (optionnel) trier par année croissante
+      const sorted = entries.sort((a, b) => parseInt(a[0], 10) - parseInt(b[0], 10));
+
+      // Puces historiques (N-4, N-3, N-2, ...)
+      const chipsHistorique = sorted.map(([an, val]) => `
+        <div class="chip ${(+val > 0 ? 'chip-on' : 'chip-off')}">
+          <span class="chip-badge">${an}</span>
+          <span class="chip-val">${euro(+val || 0)}</span>
+        </div>
+      `).join('');
+
+      // Dernière année + 1 (fallback: année courante si aucune entrée)
+      const years    = sorted.map(([an]) => parseInt(an, 10)).filter(n => !Number.isNaN(n));
+      const nextYear = years.length ? Math.max(...years) + 1 : (new Date().getFullYear());
+
+      // Puce "plafond_actuel_restant"
+      const plafondActuel = +pd?.plafond_actuel_restant || 0;
+      const chipActuel = `
+        <div class="chip-last chip ${(plafondActuel > 0 ? 'chip-on' : 'chip-off')}">
+          <span class="chip-badge">${nextYear}</span>
+          <span class="chip-val">${euro(plafondActuel)}</span>
+        </div>
+      `;
+
+      return chipsHistorique + chipActuel;
+    })();
+
+    // MAJ primeUniquePossible
+    const primeUniquePossible = euro(
+      (sum(pd?.plafond_non_utilise_restant || {})) + (+pd?.plafond_actuel_restant || 0)
+    );
+
+
+    // Transferts (si présents)
+    const transfertRecu  = pd.transferts?.recu ?? pd.transfert_total_recu ?? 0;
+    const transfertDonne = pd.transferts?.donne ?? 0;
+    const transfertRows = (transfertRecu>0 || transfertDonne>0) ? `
+    <div class="panel">
+      <div class="panel-title">Transferts de plafond</div>
+      <div class="transfer-row">
+        <div class="transfer-item">
+          <div class="transfer-dot in"></div>
+          <div class="transfer-content">
+            <div class="transfer-label">Transfert reçu</div>
+            <div class="transfer-val">${euro(transfertRecu)}</div>
+          </div>
+        </div>
+        <div class="transfer-item">
+          <div class="transfer-dot out"></div>
+          <div class="transfer-content">
+            <div class="transfer-label">Transfert donné</div>
+            <div class="transfer-val">${euro(transfertDonne)}</div>
+          </div>
+        </div>
+        <div class="panel-note">Le transfert de plafond permet à un déclarant d’utiliser le plafond non consommé de l’autre au sein du foyer fiscal et réciproquement.</div>
+      </div>
+    </div>
+    ` : '';
+
+    // Projection N+1 (plafonds reportables la prochaine année)
+    const chipsNext = (pd.plafond_non_utilise_prochaine_annee?.par_annee
+      ? Object.entries(pd.plafond_non_utilise_prochaine_annee.par_annee)
+          .map(([an, val]) => `
+            <div class="chip chip-next">
+              <span class="chip-badge">${parseInt(an) + 1}</span>
+              <span class="chip-val">${euro(+val)}</span>
+            </div>
+          `).join('')
+      : ''
+    );
+
+    // Carte
     return `
       <div class="card">
         <div class="heading">
@@ -667,10 +755,10 @@
             <h1 class="name">${d.prenom ? d.prenom + ' ' + d.nom : ''}</h1>
             <div class="sub">TMI ${Math.round((tmi ?? d.tmi)*100)}% · Retraite à 64 ans</div>
           </div>
-          <div>
-            <a class="btn show-calendly" href="#">Prendre un rendez-vous</a>
-          </div>
+          <div><a class="btn show-calendly" href="#">Prendre un rendez-vous</a></div>
         </div>
+
+        <!-- Stats existantes -->
         <div class="grid two-col" style="margin-top:1.5rem;">
           <div class="stat"><h4>Épargne mensuelle</h4><div class="value">${formatEuro(d.versements_mensuel)}</div><div class="small">Versée chaque mois</div></div>
           <div class="stat"><h4>Épargne annuelle</h4><div class="value">${formatEuro(d.versements_annuel)}</div><div class="small">Total par an</div></div>
@@ -680,11 +768,36 @@
           <div class="stat"><h4>Plafond non utilisé pour le PER</h4><div class="value">${formatEuro(d.plafonds?.non_utilise)}</div><div class="small">Disponible pour cette année</div></div>
           <div class="stat"><h4>Plafond actuel pour le PER</h4><div class="value">${formatEuro(d.plafonds?.actuel)}</div><div class="small">Disponible pour cette année</div></div>
           ${(d.plafonds?.transfere_recu ?? 0) > 0 ? `<div class="stat"><h4>Plafond transféré reçu</h4><div class="value">${formatEuro(d.plafonds.transfere_recu)}</div><div class="small">Utilisé depuis l’autre déclarant</div></div>` : ''}
-          ${typeof d.plafonds?.restant === 'number' ? `<div class="stat"><h4>Plafond restant</h4><div class="value">${formatEuro(d.plafonds.restant)}</div><div class="small">Après transferts (année en cours)</div></div>  ` : ''}
-          <div class="stat"><h4>Économie d’impôt totale</h4><div class="value">${formatEuro(d.economie?.totale)}</div><div class="small">Sur toute la période</div></div>
+          <div class="stat"><h4>Économie d’impôt cette année</h4><div class="value">${formatEuro(d.economie_annee1)}</div><div class="small">Sous réserve d’impôt à payer</div></div>
           <div class="stat"><h4>Nombre d’années de déduction</h4><div class="value">${d.economie?.nb_annees}</div><div class="small">Années restantes</div></div>
           <div class="stat"><h4>Taux marginal d’imposition (TMI)</h4><div class="value">${Math.round((tmi ?? d.tmi)*100)}%</div><div class="small">Votre tranche</div></div>
         </div>
+
+        <!-- NOUVEAU : Plafonds & transferts -->
+        <div class="panel-group">
+          <div class="panel">
+            <div class="panel-title">Plafonds reportables restants</div>
+            <div class="chips">${chipsReportable}</div>
+            <div class="panel-note">Plafonds des 3 années précédentes + plafond de cette année.</div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Versement possible cette année</div>
+            <div class="big-number">${primeUniquePossible}</div>
+            <div class="panel-note">C'est le montant que vous pouvez encore verser sur votre PER cette année, déductible sous réserve d’avoir encore un impôt à payer.</div>
+          </div>
+
+          ${transfertRows}
+
+          ${chipsNext ? `
+            <div class="panel">
+              <div class="panel-title">Projection de vos plafonds reportables pour l’année prochaine</div>
+              <div class="chips">${chipsNext}</div>
+              <div class="panel-note">C'est une estimation si vous n’utilisez pas le reliquat cette année.</div>
+            </div>
+          ` : ''}
+        </div>
+
         <div class="advice">
           <div class="advice-icon">✔</div>
           <div>
@@ -692,17 +805,19 @@
             <div>${d.astuce || '-'}</div>
           </div>
         </div>
+
         <div class="grid" style="margin-top:2rem;">
           <div class="stat" style="flex:1;">
             <h4>Conseil personnalisé</h4>
             <p style="margin:6px 0 0; line-height:1.3;">${d.conseil_personnalise || '-'}</p>
           </div>
         </div>
-        <div class="footer-line">
-          ${message}
-        </div>
+
+        <div class="footer-line">${message || ''}</div>
       </div>
     `;
   }
+
+
 
 })(jQuery);
