@@ -627,7 +627,7 @@ function getPrompt($age1, $age2,  $text, $data, $versementMensuel1, $versementMe
   Consignes pour chaque champ :
   **Très important l'astuce et le conseil personnalisé par déclarant doivent etre strictement différents.**
   Pour astuce_declarantX :
-  Une phrase, 250 caractères max, personnalisée (utilise le prénom), qui propose une action concrète pour optimiser le PER : ajuster les versements (pour annuler l’impôt), prioriser les plafonds non utilisés, ajuster le rythme, etc.
+  2 phrases, 350 caractères max, personnalisée (utilise le prénom), qui propose une action concrète pour optimiser le PER : ajuster les versements (pour annuler l’impôt), prioriser les plafonds non utilisés, ajuster le rythme, etc.
   L’astuce doit être différente du conseil et différente entre les deux déclarants.
   Pour conseil_personnalise_declarantX :
   Une phrase, 250 caractères max, personnalisée, qui donne un conseil concret (priorisation, rythme, plafond, etc.), ton simple, confiant et rassurant.
@@ -902,16 +902,7 @@ function traiter_millesime_actuel(float &$besoin1, float &$besoin2, float &$pa1,
     return $res;
 }
 
-function calcul_exact_par_millesime(
-    float $tmi,
-    float $versementAnnuel1,
-    float $versementAnnuel2,
-    float $plafondActuel1,
-    float $plafondActuel2,
-    array  $nonUtilise1,
-    array  $nonUtilise2,
-    int    $anneeCotisation
-) {
+function calcul_exact_par_millesime($tmi,$versementAnnuel1,$versementAnnuel2,$plafondActuel1,$plafondActuel2,$nonUtilise1,$nonUtilise2,$anneeCotisation) {
     // --- INIT identique ---
     $nu1 = [
         'N-4' => (float)($nonUtilise1['N-4'] ?? 0.0),
@@ -926,11 +917,22 @@ function calcul_exact_par_millesime(
     $pa1 = (float)$plafondActuel1;
     $pa2 = (float)$plafondActuel2;
 
-    $besoin1 = max(0.0, $versementAnnuel1);
-    $besoin2 = max(0.0, $versementAnnuel2);
+    $besoin1 = max(0.0, (float)$versementAnnuel1);
+    $besoin2 = max(0.0, (float)$versementAnnuel2);
 
     $eco1 = 0.0; $eco2 = 0.0;
     $details = ['N-4'=>[],'N-3'=>[],'N-2'=>[],'N-1'=>[]];
+
+    // --- Détection de présence D1/D2 ---
+    $sumNu = static function(array $nu): float {
+        return (float)($nu['N-4'] ?? 0) + (float)($nu['N-3'] ?? 0) + (float)($nu['N-2'] ?? 0);
+    };
+    $isD1 = ($besoin1 > 0.0) || ($pa1 > 0.0) || ($sumNu($nu1) > 0.0);
+    $isD2 = ($besoin2 > 0.0) || ($pa2 > 0.0) || ($sumNu($nu2) > 0.0);
+
+    // Si un déclarant est absent, on neutralise complètement ses besoins et ses droits
+    if (!$isD1) { $besoin1 = 0.0; $pa1 = 0.0; $nu1 = ['N-4'=>0.0,'N-3'=>0.0,'N-2'=>0.0]; }
+    if (!$isD2) { $besoin2 = 0.0; $pa2 = 0.0; $nu2 = ['N-4'=>0.0,'N-3'=>0.0,'N-2'=>0.0]; }
 
     // --- N-4 à N-2 identique ---
     foreach (['N-4','N-3','N-2'] as $k) {
@@ -939,7 +941,6 @@ function calcul_exact_par_millesime(
         $eco1 += ($r['d1']['propre'] + $r['d1']['transfert_recu']) * $tmi;
         $eco2 += ($r['d2']['propre'] + $r['d2']['transfert_recu']) * $tmi;
     }
-
     // --- N-1 identique ---
     $r = traiter_millesime_actuel($besoin1, $besoin2, $pa1, $pa2);
     $details['N-1'] = $r;
@@ -952,6 +953,7 @@ function calcul_exact_par_millesime(
         'N-3' => $nu1['N-2'],
         'N-2' => max(0.0, $pa1),
     ];
+
     $prochaine_annee2 = [
         'N-4' => $nu2['N-3'],
         'N-3' => $nu2['N-2'],
@@ -965,7 +967,7 @@ function calcul_exact_par_millesime(
         ];
     };
 
-    // ====== ENRICHISSEMENTS FRONT-FRIENDLY (sans rien casser) ======
+    // ====== ENRICHISSEMENTS FRONT-FRIENDLY ======
     $sumUsed = function(array $det, string $who, string $k): float {
         return (float)($det[$k][$who]['propre'] ?? 0.0) + (float)($det[$k][$who]['transfert_recu'] ?? 0.0);
     };
@@ -983,9 +985,9 @@ function calcul_exact_par_millesime(
     ];
 
     $stateOf = function(float $used, float $rest): string {
-        if ($used > 0.0 && $rest <= 0.0) return 'full';   // entièrement utilisé
-        if ($used > 0.0 && $rest  > 0.0) return 'part';   // partiellement utilisé
-        return 'none';                                    // pas utilisé
+        if ($used > 0.0 && $rest <= 0.0) return 'full';
+        if ($used > 0.0 && $rest  > 0.0) return 'part';
+        return 'none';
     };
 
     // totaux transferts
@@ -999,9 +1001,10 @@ function calcul_exact_par_millesime(
     $transf_recu_d2  = $sumKey($details,'d2','transfert_recu');
     $transf_donne_d2 = $sumKey($details,'d2','transfert_donne');
 
-    // ====== PAYLOAD IDENTIQUE + CHAMPS AJOUTÉS ======
+    // ====== PAYLOAD ======
     $out1 = [
-        // --- Clés historiques (inchangées) ---
+        'is_present' => $isD1,
+
         'economie_totale' => round($eco1, 2),
         'details' => $details,
         'plafond_actuel_restant' => round(max(0.0, $pa1), 2),
@@ -1021,7 +1024,7 @@ function calcul_exact_par_millesime(
             'par_annee' => $mapAnnees($prochaine_annee1),
         ],
 
-        // --- Nouveaux champs (facilitent le JS/UX) ---
+        // Nouveaux champs
         'plafond_utilise_par_annee' => [
             'N-4' => round($used1['N-4'], 2),
             'N-3' => round($used1['N-3'], 2),
@@ -1032,7 +1035,7 @@ function calcul_exact_par_millesime(
             'N-4' => $stateOf($used1['N-4'], $nu1['N-4']),
             'N-3' => $stateOf($used1['N-3'], $nu1['N-3']),
             'N-2' => $stateOf($used1['N-2'], $nu1['N-2']),
-            'N'   => $stateOf($used1['N-1'], $pa1), // année courante
+            'N'   => $stateOf($used1['N-1'], $pa1),
         ],
         'totaux' => [
             'utilise' => round($used1['N-4'] + $used1['N-3'] + $used1['N-2'] + $used1['N-1'], 2),
@@ -1045,6 +1048,8 @@ function calcul_exact_par_millesime(
     ];
 
     $out2 = [
+        'is_present' => $isD2,
+
         'economie_totale' => round($eco2, 2),
         'details' => $details,
         'plafond_actuel_restant' => round(max(0.0, $pa2), 2),
@@ -1063,8 +1068,6 @@ function calcul_exact_par_millesime(
             ],
             'par_annee' => $mapAnnees($prochaine_annee2),
         ],
-
-        // Nouveaux champs
         'plafond_utilise_par_annee' => [
             'N-4' => round($used2['N-4'], 2),
             'N-3' => round($used2['N-3'], 2),

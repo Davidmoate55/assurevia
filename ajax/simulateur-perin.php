@@ -54,14 +54,16 @@ function handle_simulation_perin_avec_avis() {
     $data['declarant2'] = $interetComposeDeclarant2;
     $data['plafonds']   = $extractionPlafonds;
 
-    $montantAnnuelDeclarant1  = (floatval($versementMensuel1) > 0) ? floatval($versementMensuel1) * 12 : 0;
-    $montantAnnuelDeclarant2  = (floatval($versementMensuel2) > 0) ? floatval($versementMensuel2) * 12 : 0;
-
     $plafond_non_utilise1                     = $data['plafonds']["plafond_non_utilise_declarant1"];
     $plafond_non_utilise2                     = $data['plafonds']["plafond_non_utilise_declarant2"];
     $plafond_revenus_declarant1               = $data['plafonds']["plafond_revenus_declarant1"];
     $plafond_revenus_declarant2               = $data['plafonds']["plafond_revenus_declarant2"];
-
+    if(empty($plafond_revenus_declarant2) || $plafond_revenus_declarant2 == NULL){
+      $age2               = '';
+      $versementMensuel2  = 0;
+    }
+    $montantAnnuelDeclarant1  = (floatval($versementMensuel1) > 0) ? floatval($versementMensuel1) * 12 : 0;
+    $montantAnnuelDeclarant2  = (floatval($versementMensuel2) > 0) ? floatval($versementMensuel2) * 12 : 0;
     // Vérifier la session
     if (
         isset($_SESSION[$session_key]['pdf_name'], $_SESSION[$session_key]['pdf_size'])
@@ -73,6 +75,7 @@ function handle_simulation_perin_avec_avis() {
         // Envoi à ChatGPTs
         $prompt = getPrompt($age1, $age2,  $text, $data, $versementMensuel1, $versementMensuel2);
         $responseChatGpt = query_chatgpt_text($prompt);
+        //var_dump($responseChatGpt);die;
         $_SESSION[$session_key] = [
           'pdf_name'        => $pdf_name,
           'pdf_size'        => $pdf_size,
@@ -83,10 +86,17 @@ function handle_simulation_perin_avec_avis() {
     if(isset($extractionPlafonds['tmi']) && !empty($extractionPlafonds['tmi'])){
         $tmi = $extractionPlafonds['tmi'];
     }
-
+    $anneeCotisation  = (int)date('Y');
+    if(isset($extractionPlafonds['annee_N']) && !empty($extractionPlafonds['annee_N'])){
+      $anneeCotisation  = $extractionPlafonds['annee_N'];
+    }
     $economiesImpotsPluriannuelles = calculEconomiesImpotsPluriannuelles($tmi, $montantAnnuelDeclarant1, $montantAnnuelDeclarant2, $plafond_non_utilise1, $plafond_non_utilise2, $plafond_revenus_declarant1, $plafond_revenus_declarant2, $age1, $age2, $age_retraite = 64);
+    $nonUtilise1    = $extractionPlafonds["plafonds_non_utilise_declarant1"];
+    $nonUtilise2    = $extractionPlafonds["plafonds_non_utilise_declarant2"];
+    $resultPlafonds = calcul_exact_par_millesime($tmi,$montantAnnuelDeclarant1,$montantAnnuelDeclarant2,$plafond_revenus_declarant1,$plafond_revenus_declarant2,$nonUtilise1,$nonUtilise2,$anneeCotisation);
     $resultatSimulateur = [
-        'message'                 =>'Résumé basé sur les données extraites de votre avis d’imposition. L’avantage fiscal est calculé en fonction de vos plafonds et de votre TMI. Investir comporte des risques de perte en capital.',
+        'plafondsDetails'         => $resultPlafonds,
+        'message'                 => "Les résultats fournis par ce simulateur sont des estimations à titre indicatif. Pour une évaluation précise et complète de vos économies d'impôts, veuillez vous référer à votre dernier avis d'impôt. Investir comporte des risques de perte en capital.",
         'tmi'                     => $responseChatGpt['tmi'] ?? 0.0,
         'is_avis_imposition'      => $responseChatGpt['is_avis_imposition'] ?? '',
         'dernier_avis_imposition' => $responseChatGpt['dernier_avis_imposition'] ?? '',
@@ -98,6 +108,7 @@ function handle_simulation_perin_avec_avis() {
             'versements_cumules'  => $interetComposeDeclarant1['versements_cumules'] ?? 0.0,
             'capital_final'       => $interetComposeDeclarant1['capital_final'] ?? 0.0,
             'plus_value'          => $interetComposeDeclarant1['plus_value'] ?? 0.0,
+            'economie_annee1'     => $economiesImpotsPluriannuelles['declarant1']['economie_annee1'] ?? 0.0,
             'plafonds' => [
                 'non_utilise' => $plafond_non_utilise1,
                 'actuel'       => $plafond_revenus_declarant1,
@@ -119,6 +130,7 @@ function handle_simulation_perin_avec_avis() {
             'versements_cumules' => $interetComposeDeclarant2['versements_cumules'] ?? 0.0,
             'capital_final'      => $interetComposeDeclarant2['capital_final'] ?? 0.0,
             'plus_value'         => $interetComposeDeclarant2['plus_value'] ?? 0.0,
+            'economie_annee1'     => $economiesImpotsPluriannuelles['declarant2']['economie_annee1'] ?? 0.0,
             'plafonds' => [
                 'non_utilise' => $plafond_non_utilise2,
                 'actuel'       => $plafond_revenus_declarant2,
@@ -219,7 +231,6 @@ function handle_simulation_perin_sans_avis() {
     $interetComposeDeclarant1       = calculInteretsComposes($versement, $taux_profil, $age, 64);
     $interetComposeDeclarant2       = calculInteretsComposes($versement2, $taux_profil, $age2, 64);
     $data = [];
-    $resultPlafonds = calcul_exact_par_millesime($tmi,$montantAnnuelDeclarant1,$montantAnnuelDeclarant2,$plafondActuel1,$plafondActuel2,$nonUtilise1,$nonUtilise2,$anneeCotisation);
     $data['declarant1'] = $interetComposeDeclarant1;
     $data['declarant2'] = $interetComposeDeclarant2;
     $data['plafonds']["plafond_non_utilise_declarant1"]   = $plafond_non_utilise1;
@@ -229,6 +240,7 @@ function handle_simulation_perin_sans_avis() {
     $data['tmi']                                          = $tmi * 100;
     $prompt = getPromptSansAvis($age, $age2, $data, $versement, $versement2);
     $responseChatGpt = query_chatgpt_text($prompt);
+    $resultPlafonds = calcul_exact_par_millesime($tmi,$montantAnnuelDeclarant1,$montantAnnuelDeclarant2,$plafondActuel1,$plafondActuel2,$nonUtilise1,$nonUtilise2,$anneeCotisation);
     $resultatSimulateur = [
         'plafondsDetails'         => $resultPlafonds,
         'message'                 => "Les résultats fournis par ce simulateur sont des estimations à titre indicatif. Pour une évaluation précise et complète de vos économies d'impôts, veuillez vous référer à votre dernier avis d'impôt. Investir comporte des risques de perte en capital.",

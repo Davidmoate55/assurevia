@@ -1033,13 +1033,19 @@ input[type=file]::file-selector-button:hover {
     padding: 10px 10px 10px 10px;
 }
 
+.advice-panel {
+  background: #f0f7fa !important;
+  border: 1px solid #fff !important;
+  display:flex !important;
+  gap:14px;
+}
 .advice {
-  background: #F9F9FA;
-  border: 1px solid #fff;
+  background: #f0f7fa !important;
+  border: 1px solid #fff !important;
   padding:14px 16px;
   border-radius:10px;
   margin-top:1.5rem;
-  display:flex;
+  display:flex !important;
   gap:14px;
 }
 .advice-icon {
@@ -1529,7 +1535,7 @@ label.required::after {
 .btn-popup-rdv:hover { background: #618687; color: #fff; }
 
 #close-popup:hover, #close-popup:focus {
-  background-color: none !important;
+  background: none !important;
 }
 .message-rgpd {
     font-size: 12px;
@@ -1920,9 +1926,16 @@ label.required::after {
   gap: 16px;
   margin-top: 20px;
 }
+/* Groupes de panneaux */
+.panel-group-un-declarant {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
 .panel {
   grid-column: span 6;
-  background: #f3faf9;           /* léger vert très pâle */
+  background: #F9F9FA;           /* léger vert très pâle */
   border: 1px solid rgba(31,72,79,.08);
   border-radius: 14px;
   padding: 14px 16px;
@@ -1930,6 +1943,16 @@ label.required::after {
 @media (max-width: 992px){
   .panel { grid-column: 1 / -1; }
 }
+@media (max-width: 1260px){
+  /* Groupes de panneaux */
+  .panel-group-un-declarant {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+  }
+}
+
 
 .panel-title {
   font-weight: 600;
@@ -1970,9 +1993,9 @@ label.required::after {
 .chip-last .chip-badge {
   background: #1f3e52 !important;
 }
-.chip-on  { background: #e8f6f3; border-color: rgba(31,72,79,.14); }
+.chip-on  { background: #f0f7fa; border-color: rgba(31,72,79,.14); }
 .chip-off { background: #f7f8f9; color: #7a8791; }
-.chip-next{ background: #eef8fb; border-color: rgba(31,72,79,.12); }
+.chip-next{ background: #f0f7fa; border-color: rgba(31,72,79,.12); }
 
 .chip-badge {
   display: inline-block;
@@ -1981,7 +2004,7 @@ label.required::after {
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 999px;
-  background: #4fa79b;
+  background: #1f3e52;
   color: #fff;
 }
 .chip-off .chip-badge { background: #b8c3c9; }
@@ -2012,7 +2035,7 @@ label.required::after {
   width: 10px; height: 10px; border-radius: 50%;
 }
 .transfer-dot.in  { background: #2a9d8f; }   /* reçu */
-.transfer-dot.out { background: #7B1E3C; }   /* donné */
+.transfer-dot.out { background: #1f3e52; }   /* donné */
 .transfer-label { font-size: .9rem; color: #5C6368; }
 .transfer-val   { font-weight: 700; color: #1f3e52; }
 //* Pastille: taille fixe, n'occupe pas d'espace en + */
